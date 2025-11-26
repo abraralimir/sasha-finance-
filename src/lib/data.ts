@@ -11,7 +11,7 @@ import {
 import { initAdmin } from '@/firebase/admin';
 import type { User } from './types';
 
-// In a real app, this would be initialized once and provided via context
+// Initialize the admin SDK and get Firestore. This is safe for server-side use.
 const firestore = getFirestore(initAdmin());
 const usersCollection = collection(firestore, 'users');
 

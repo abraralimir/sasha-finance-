@@ -7,7 +7,8 @@ import type { OnboardUserFormData, User, LoginFormData } from '@/lib/types';
 import { getAuth } from 'firebase-admin/auth';
 import { initAdmin } from '@/firebase/admin';
 
-// Initialize Firebase Admin for server-side actions
+// Initialize Firebase Admin for server-side actions.
+// This call is now safe because admin.ts is purely server-side.
 const adminApp = initAdmin();
 const adminAuth = getAuth(adminApp);
 
@@ -17,7 +18,7 @@ export async function loginUser(credentials: LoginFormData): Promise<User | null
     if (!user) {
         return null;
     }
-    // In a real app, we would issue a session token. Here we just return the user.
+    // The user exists in our database. The client will handle Firebase Auth sign-in.
     return user;
 }
 
@@ -80,7 +81,7 @@ export async function submitLoanRequest(userId: string, loanAmount: number): Pro
 }
 
 export async function onboardNewUser(formData: OnboardUserFormData): Promise<User> {
-  // Check if user already exists
+  // Check if user already exists in Firestore
   const existingUser = await findUserByCredentials(formData.fullName, formData.secretKey);
   if (existingUser) {
     throw new Error('A user with these credentials already exists.');
@@ -97,6 +98,7 @@ export async function onboardNewUser(formData: OnboardUserFormData): Promise<Use
       displayName: formData.fullName,
     });
     
+    // Now add the user to our Firestore database
     const newUser = await addNewUser(userRecord.uid, email, formData.fullName, formData.secretKey);
     
     revalidatePath('/admin1333');
