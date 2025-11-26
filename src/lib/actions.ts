@@ -1,19 +1,23 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { assessLoanEligibility } from '@/ai/flows/loan-eligibility-assessment';
+import {
+  assessLoanEligibility,
+  LoanEligibilityOutput,
+} from '@/ai/flows/loan-eligibility-assessment';
 import type { LoanApplicationData } from '@/lib/types';
 import { createLoanApplication } from '@/lib/data';
 
 
 export async function submitLoanApplication(
   data: LoanApplicationData
-): Promise<{ eligibility: { isEligible: boolean; reason: string }, applicationId: string }> {
+): Promise<{ eligibility: LoanEligibilityOutput, applicationId: string }> {
 
   // First, get the AI's assessment
   const eligibility = await assessLoanEligibility({
     loanType: data.loanType,
     loanAmount: data.loanAmount,
+    loanTerm: data.loanTerm,
     creditScore: data.creditScore,
     annualIncome: data.annualIncome,
     employmentStatus: data.employmentStatus,

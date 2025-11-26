@@ -40,6 +40,8 @@ import {
   FileText,
   BadgePercent,
   ShieldCheck,
+  CalendarClock,
+  Repeat,
 } from 'lucide-react';
 import AnimatedBox from '@/components/animated-box';
 import AurumLogo from '../aurum-logo';
@@ -59,6 +61,7 @@ const loanApplicationSchema = z.object({
   loanAmount: z.coerce
     .number()
     .min(1000, 'Loan amount must be at least $1,000.'),
+  loanTerm: z.coerce.number().min(1, 'Loan term must be at least 1 year.'),
   creditScore: z.coerce
     .number()
     .min(300, 'Credit score must be at least 300.')
@@ -105,6 +108,13 @@ const baseFormSteps = [
     icon: PiggyBank,
   },
   {
+    field: 'loanTerm',
+    label: 'Loan Term (Years)',
+    type: 'select',
+    options: ['1', '3', '5', '10', '15', '20', '30'],
+    icon: CalendarClock,
+  },
+  {
     field: 'creditScore',
     label: 'Credit Score',
     placeholder: '650',
@@ -135,6 +145,17 @@ const propertyStep = {
   icon: Home,
 } as const;
 
+// EMI Calculation function
+const calculateEMI = (principal: number, annualRate: number, years: number) => {
+    if (principal <= 0 || annualRate <= 0 || years <= 0) return 0;
+    const monthlyRate = annualRate / 12 / 100;
+    const numberOfMonths = years * 12;
+    const emi =
+      (principal * monthlyRate * Math.pow(1 + monthlyRate, numberOfMonths)) /
+      (Math.pow(1 + monthlyRate, numberOfMonths) - 1);
+    return emi;
+};
+
 export default function LoanApplicationFlow() {
   const [hasStarted, setHasStarted] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
@@ -154,6 +175,7 @@ export default function LoanApplicationFlow() {
       fullName: '',
       loanType: 'personal',
       loanAmount: 50000,
+      loanTerm: 5,
       creditScore: 650,
       annualIncome: 70000,
       employmentStatus: 'employed',
@@ -161,6 +183,9 @@ export default function LoanApplicationFlow() {
   });
 
   const loanType = form.watch('loanType');
+  const loanAmount = form.watch('loanAmount');
+  const loanTerm = form.watch('loanTerm');
+
 
   const formSteps =
     loanType === 'property'
@@ -273,7 +298,7 @@ export default function LoanApplicationFlow() {
                               setCurrentStep(1);
                             }
                           }}
-                          defaultValue={field.value}
+                          defaultValue={String(field.value)}
                         >
                           <FormControl>
                             <SelectTrigger>
@@ -421,6 +446,7 @@ export default function LoanApplicationFlow() {
         }
       
       case formSteps.length + 2: // Terms & Conditions
+        const monthlyPayment = calculateEMI(loanAmount, assessmentResult?.interestRate || 0, loanTerm);
         return (
            <AnimatedBox key="terms" className="w-full max-w-lg">
              <Card className="bg-card/80 backdrop-blur-sm border-primary/20 shadow-lg shadow-primary/5">
@@ -430,11 +456,20 @@ export default function LoanApplicationFlow() {
                  <CardDescription className="text-center">Please review and accept the terms to proceed.</CardDescription>
                </CardHeader>
                <CardContent className="space-y-6">
-                 <div className="flex items-center justify-center p-4 rounded-lg bg-accent/50 border border-primary/20">
-                    <BadgePercent className="h-8 w-8 text-primary mr-4"/>
-                    <div>
-                        <p className="text-muted-foreground">Interest Rate (Annual)</p>
-                        <p className="font-bold text-2xl text-primary">{assessmentResult?.interestRate?.toFixed(2)}%</p>
+                 <div className="grid grid-cols-2 gap-4">
+                    <div className="flex items-center justify-center p-4 rounded-lg bg-accent/50 border border-primary/20">
+                        <BadgePercent className="h-8 w-8 text-primary mr-4"/>
+                        <div>
+                            <p className="text-muted-foreground">Interest Rate</p>
+                            <p className="font-bold text-2xl text-primary">{assessmentResult?.interestRate?.toFixed(2)}%</p>
+                        </div>
+                    </div>
+                    <div className="flex items-center justify-center p-4 rounded-lg bg-accent/50 border border-primary/20">
+                        <Repeat className="h-8 w-8 text-primary mr-4"/>
+                        <div>
+                            <p className="text-muted-foreground">Monthly Payment</p>
+                            <p className="font-bold text-2xl text-primary">${monthlyPayment.toFixed(2)}</p>
+                        </div>
                     </div>
                  </div>
 

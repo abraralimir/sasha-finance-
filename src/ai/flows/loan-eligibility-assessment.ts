@@ -14,6 +14,7 @@ import {z} from 'genkit';
 const LoanEligibilityInputSchema = z.object({
   loanType: z.enum(['personal', 'property']).describe('The type of loan requested.'),
   loanAmount: z.number().describe('The amount of loan requested by the user.'),
+  loanTerm: z.number().describe('The desired loan term in years.'),
   creditScore: z.number().describe('The credit score of the user.'),
   annualIncome: z.number().describe('The annual income of the user.'),
   employmentStatus: z.string().describe('The employment status of the user.'),
@@ -44,6 +45,7 @@ You will assess the user's loan eligibility based on the following information:
 
 Loan Type: {{{loanType}}}
 Loan Amount: {{{loanAmount}}}
+Loan Term: {{{loanTerm}}} years
 Credit Score: {{{creditScore}}}
 Annual Income: {{{annualIncome}}}
 Employment Status: {{{employmentStatus}}}
@@ -52,8 +54,8 @@ Employment Status: {{{employmentStatus}}}
 Property Value: {{{propertyValue}}}
 {{/if}}
 
-- For a 'property' loan, the loan amount should not exceed 80% of the property value.
-- For a 'personal' loan, the loan amount should generally not exceed 50% of the annual income.
+- For a 'property' loan, the loan amount should not exceed 80% of the property value. A longer term (e.g. > 15 years) is common.
+- For a 'personal' loan, the loan amount should generally not exceed 50% of the annual income. The term should not be excessively long (e.g. > 7 years).
 - A credit score below 600 is a high risk.
 - 'unemployed' status is very high risk unless income is substantial.
 
@@ -61,8 +63,8 @@ You will make a determination as to whether the user is eligible for the loan or
 Explain the reasoning behind your decision in the reason output field.
 
 If the user IS eligible, you MUST determine an annual interest rate for the loan between 6% and 12%.
-- A lower risk profile (e.g., high credit score, high income relative to loan amount) should result in a lower interest rate (closer to 6%).
-- A higher risk profile (e.g., lower credit score, 'self-employed') should result in a higher interest rate (closer to 12%).
+- A lower risk profile (e.g., high credit score, high income relative to loan amount, shorter term) should result in a lower interest rate (closer to 6%).
+- A higher risk profile (e.g., lower credit score, 'self-employed', longer term) should result in a higher interest rate (closer to 12%).
 - If you approve the loan, you must set the interestRate field.
 - If you reject the loan, do not provide an interestRate.
 `,

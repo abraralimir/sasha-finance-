@@ -26,6 +26,7 @@ export interface LoanApplicationData {
     fullName: string;
     loanType: 'personal' | 'property';
     loanAmount: number;
+    loanTerm: number;
     creditScore: number;
     annualIncome: number;
     employmentStatus: 'employed' | 'unemployed' | 'self-employed' | 'student';
