@@ -44,11 +44,15 @@ export async function submitLoanRequest(userId: string, loanAmount: number): Pro
   await new Promise(resolve => setTimeout(resolve, 2000));
 
   try {
+    if (!user.creditScore || !user.annualIncome || !user.employmentStatus) {
+        throw new Error('User data is incomplete for loan assessment.');
+    }
+    
     const eligibility = await assessLoanEligibility({
       loanAmount,
-      creditScore: user.creditScore!,
-      annualIncome: user.annualIncome!,
-      employmentStatus: user.employmentStatus!,
+      creditScore: user.creditScore,
+      annualIncome: user.annualIncome,
+      employmentStatus: user.employmentStatus,
     });
     
     // AI directly approves or rejects
@@ -77,13 +81,16 @@ export async function submitLoanRequest(userId: string, loanAmount: number): Pro
 
 export async function onboardNewUser(formData: OnboardUserFormData): Promise<User> {
   // Check if user already exists
-  if (await findUserByCredentials(formData.fullName, formData.secretKey)) {
+  const existingUser = await findUserByCredentials(formData.fullName, formData.secretKey);
+  if (existingUser) {
     throw new Error('A user with these credentials already exists.');
   }
 
   try {
     // Generate a unique email, create the user in Firebase Auth
     const email = `${formData.fullName.replace(/\s+/g, '.').toLowerCase()}-${Date.now()}@aurum.fake`; 
+    
+    // This part runs on the server using the Admin SDK
     const userRecord = await adminAuth.createUser({
       email: email,
       password: formData.secretKey,
@@ -91,6 +98,7 @@ export async function onboardNewUser(formData: OnboardUserFormData): Promise<Use
     });
     
     const newUser = await addNewUser(userRecord.uid, email, formData.fullName, formData.secretKey);
+    
     revalidatePath('/admin1333');
     revalidatePath('/admin1333/add-user');
     revalidatePath('/');
@@ -99,7 +107,7 @@ export async function onboardNewUser(formData: OnboardUserFormData): Promise<Use
   } catch (error) {
     console.error("Error onboarding new user:", error);
     // Provide a more specific error message if possible
-    if (error instanceof Error && 'code' in error && error.code === 'auth/email-already-exists') {
+    if (error instanceof Error && (error as any).code === 'auth/email-already-exists') {
         throw new Error('This user might already be registered. Please try a different name.');
     }
     throw new Error("Failed to create a new user account.");

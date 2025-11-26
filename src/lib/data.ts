@@ -31,9 +31,10 @@ export const addNewUser = async (
     secretKey,
     kycStatus: 'approved', // Auto-approved since we removed KYC flow
     loanStatus: 'none',
-    creditScore: Math.floor(Math.random() * (850 - 300 + 1)) + 300,
-    annualIncome: Math.floor(Math.random() * (200000 - 30000 + 1)) + 30000,
-    employmentStatus: getRandomItem(['employed', 'self-employed', 'unemployed', 'student']),
+    // Generate random financial data for the demo
+    creditScore: Math.floor(Math.random() * (850 - 550 + 1)) + 550, // Score between 550-850
+    annualIncome: Math.floor(Math.random() * (250000 - 40000 + 1)) + 40000, // Income between 40k-250k
+    employmentStatus: getRandomItem(['employed', 'self-employed', 'student']),
   };
   const userDocRef = doc(usersCollection, userId);
   await setDoc(userDocRef, newUser);
@@ -46,9 +47,8 @@ export const findUserByCredentials = async (
 ): Promise<User | undefined> => {
   const q = query(
     usersCollection,
-    where('fullName', '==', fullName)
-    // We can't query by secretKey directly for security reasons.
-    // We find by name and will verify the key on the client.
+    where('fullName', '==', fullName),
+    where('secretKey', '==', secretKey)
   );
 
   const querySnapshot = await getDocs(q);
@@ -56,16 +56,9 @@ export const findUserByCredentials = async (
     return undefined;
   }
   
-  // Assuming fullName + secretKey is unique
+  // Assuming fullName + secretKey is unique, so we take the first result.
   const userDoc = querySnapshot.docs[0];
-  const userData = { id: userDoc.id, ...userDoc.data() } as User;
-
-  // IMPORTANT: The secretKey check now happens on the client during login
-  if (userData.secretKey === secretKey) {
-    return userData;
-  }
-
-  return undefined;
+  return { id: userDoc.id, ...userDoc.data() } as User;
 };
 
 export const getUser = async (userId: string): Promise<User | undefined> => {

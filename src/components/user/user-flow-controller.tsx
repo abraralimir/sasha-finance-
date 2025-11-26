@@ -16,18 +16,48 @@ import { Button } from '../ui/button';
 import { KeyRound, Loader2, LogIn } from 'lucide-react';
 import AurumLogo from '../aurum-logo';
 import { useAuth } from '@/firebase';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, Auth } from 'firebase/auth';
 
 const loginSchema = z.object({
   fullName: z.string().min(1, 'Please enter your full name.'),
   secretKey: z.string().min(1, 'Please enter your secret key.'),
 });
 
+// This is a client-side helper function
+async function ensureAuthUser(auth: Auth, user: User) {
+  try {
+    // Try to sign in first
+    await signInWithEmailAndPassword(auth, user.email, user.secretKey);
+  } catch (error: any) {
+    // If user not found in Auth, create them. This handles cases where user exists in DB but not Auth.
+    if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
+      try {
+        await createUserWithEmailAndPassword(auth, user.email, user.secretKey);
+        // After creation, sign in again to establish the session
+        await signInWithEmailAndPassword(auth, user.email, user.secretKey);
+      } catch (creationError: any) {
+        // This might fail if another process created the user in a race condition.
+        // One last sign-in attempt can resolve this.
+        if (creationError.code === 'auth/email-already-exists') {
+          await signInWithEmailAndPassword(auth, user.email, user.secretKey);
+        } else {
+          // If it's a different error, re-throw it.
+          throw creationError;
+        }
+      }
+    } else {
+      // If it's another type of auth error (e.g., wrong password), re-throw it.
+      throw error;
+    }
+  }
+}
+
+
 export default function UserFlowController() {
   const [user, setUser] = useState<User | null>(null);
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
-  const auth = useAuth();
+  const auth = useAuth(); // This is the client-side auth instance
 
   const form = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
@@ -40,26 +70,13 @@ export default function UserFlowController() {
   const handleLogin = (values: z.infer<typeof loginSchema>) => {
     startTransition(async () => {
       try {
+        // Step 1: Call the server action to verify credentials against the database.
         const loggedInUser = await loginUser(values);
+
         if (loggedInUser && loggedInUser.email) {
-          // Sign in with the user's "email" and a generic password/secret.
-          // In a real app, this would be a more secure custom token flow.
-          await signInWithEmailAndPassword(auth, loggedInUser.email, loggedInUser.secretKey).catch(async (error) => {
-             // If the user does not exist in Auth, create it. This can happen if admin created user in DB but not Auth
-            if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
-               try {
-                await createUserWithEmailAndPassword(auth, loggedInUser.email, loggedInUser.secretKey);
-                // and sign in again
-                await signInWithEmailAndPassword(auth, loggedInUser.email, loggedInUser.secretKey);
-               } catch (creationError) {
-                  // This might fail if the user was created in another race condition.
-                  // We can try signing in one last time.
-                  await signInWithEmailAndPassword(auth, loggedInUser.email, loggedInUser.secretKey);
-               }
-            } else {
-              throw error;
-            }
-          });
+          // Step 2: On the client, ensure the user is signed into Firebase Auth.
+          await ensureAuthUser(auth, loggedInUser);
+          // Step 3: Set the user state to render the dashboard.
           setUser(loggedInUser);
         } else {
           toast({
@@ -67,14 +84,16 @@ export default function UserFlowController() {
             description: 'Invalid name or secret key. Please try again.',
             variant: 'destructive',
           });
+          form.reset(); // Clear form on failure
         }
       } catch (error) {
-        console.error(error);
+        console.error("Login process failed:", error);
         toast({
           title: 'Login Error',
-          description: error instanceof Error ? error.message : 'An unknown error occurred.',
+          description: error instanceof Error ? error.message : 'An unknown error occurred during login.',
           variant: 'destructive',
         });
+        form.reset(); // Clear form on failure
       }
     });
   };
@@ -111,7 +130,7 @@ export default function UserFlowController() {
                   <FormItem>
                     <FormLabel>Full Legal Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="Jane Doe" {...field} />
+                      <Input placeholder="Jane Doe" {...field} disabled={isPending} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -126,7 +145,7 @@ export default function UserFlowController() {
                     <FormControl>
                         <div className="relative">
                             <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                            <Input type="password" placeholder="••••••••" {...field} className="pl-10" />
+                            <Input type="password" placeholder="••••••••" {...field} disabled={isPending} className="pl-10" />
                         </div>
                     </FormControl>
                     <FormMessage />
