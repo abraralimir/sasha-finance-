@@ -35,6 +35,8 @@ import {
   PiggyBank,
   TrendingUp,
   Briefcase,
+  Home,
+  Wallet,
 } from 'lucide-react';
 import AnimatedBox from '@/components/animated-box';
 import AurumLogo from '../aurum-logo';
@@ -48,6 +50,7 @@ import {
 
 const loanApplicationSchema = z.object({
   fullName: z.string().min(3, 'Full name must be at least 3 characters.'),
+  loanType: z.enum(['personal', 'property']),
   loanAmount: z.coerce
     .number()
     .min(1000, 'Loan amount must be at least $1,000.'),
@@ -64,6 +67,7 @@ const loanApplicationSchema = z.object({
     'student',
     'unemployed',
   ]),
+  propertyValue: z.coerce.number().optional(),
 });
 
 const bankDetailsSchema = z.object({
@@ -73,7 +77,14 @@ const bankDetailsSchema = z.object({
 
 type LoanApplicationData = z.infer<typeof loanApplicationSchema>;
 
-const formSteps = [
+const baseFormSteps = [
+  {
+    field: 'loanType',
+    label: 'Type of Loan',
+    type: 'select',
+    options: ['personal', 'property'],
+    icon: Wallet,
+  },
   {
     field: 'fullName',
     label: 'Full Name',
@@ -111,9 +122,17 @@ const formSteps = [
   },
 ] as const;
 
+const propertyStep = {
+  field: 'propertyValue',
+  label: 'Property Value',
+  placeholder: '300000',
+  type: 'number',
+  icon: Home,
+} as const;
+
 export default function LoanApplicationFlow() {
   const [hasStarted, setHasStarted] = useState(false);
-  const [currentStep, setCurrentStep] = useState(0); // 0-4 for questions, 5 for loading, 6 for result, 7 for bank form, 8 for confirmation
+  const [currentStep, setCurrentStep] = useState(0);
   const [isPending, startTransition] = useTransition();
   const [assessmentResult, setAssessmentResult] = useState<{
     isEligible: boolean;
@@ -126,12 +145,18 @@ export default function LoanApplicationFlow() {
     mode: 'onChange',
     defaultValues: {
       fullName: '',
+      loanType: 'personal',
       loanAmount: 50000,
       creditScore: 650,
       annualIncome: 70000,
       employmentStatus: 'employed',
     },
   });
+
+  const loanType = form.watch('loanType');
+  
+  const formSteps = loanType === 'property' ? [...baseFormSteps.slice(0, 2), propertyStep, ...baseFormSteps.slice(2)] : baseFormSteps;
+
 
   const bankForm = useForm<z.infer<typeof bankDetailsSchema>>({
     resolver: zodResolver(bankDetailsSchema),
@@ -149,7 +174,6 @@ export default function LoanApplicationFlow() {
       if (currentStep < formSteps.length - 1) {
         setCurrentStep(currentStep + 1);
       } else {
-        // Last question answered, now submit
         onSubmit(form.getValues());
       }
     }
@@ -159,7 +183,6 @@ export default function LoanApplicationFlow() {
     setCurrentStep(formSteps.length); // Loading state
     startTransition(async () => {
       try {
-        // Explicitly parse with the schema to ensure correct types
         const parsedData = loanApplicationSchema.parse(values);
         const { eligibility } = await submitLoanApplication(parsedData);
         setAssessmentResult(eligibility);
@@ -196,6 +219,7 @@ export default function LoanApplicationFlow() {
   };
   
   const renderQuestion = () => {
+    if (currentStep >= formSteps.length) return null;
     const stepInfo = formSteps[currentStep];
     const Icon = stepInfo.icon;
     
@@ -219,10 +243,16 @@ export default function LoanApplicationFlow() {
                       name={stepInfo.field}
                       render={({ field }) => (
                         <FormItem>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <Select onValueChange={(value) => {
+                            field.onChange(value);
+                            // If we're changing the loan type, reset to the next step
+                            if (stepInfo.field === 'loanType') {
+                               setCurrentStep(1);
+                            }
+                          }} defaultValue={field.value}>
                             <FormControl>
                               <SelectTrigger>
-                                <SelectValue placeholder="Select status" />
+                                <SelectValue placeholder="Select one..." />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
@@ -259,7 +289,6 @@ export default function LoanApplicationFlow() {
     );
   };
   
-
   const renderContent = () => {
     if (currentStep < formSteps.length) {
       return renderQuestion();
@@ -351,7 +380,6 @@ export default function LoanApplicationFlow() {
     }
   };
 
-  // Initial welcome screen logic
   if (!hasStarted) {
      return (
         <AnimatedBox key="start" className="w-full max-w-lg">
@@ -373,7 +401,6 @@ export default function LoanApplicationFlow() {
         </AnimatedBox>
     );
   }
-
 
   return renderContent();
 }

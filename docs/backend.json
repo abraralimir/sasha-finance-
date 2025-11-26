@@ -7,15 +7,17 @@
       "properties": {
         "id": { "type": "string", "description": "Unique identifier for the application." },
         "fullName": { "type": "string", "description": "The user's full name." },
+        "loanType": { "type": "string", "description": "The type of loan requested (e.g., personal, property).", "enum": ["personal", "property"] },
         "loanAmount": { "type": "number", "description": "The current loan amount requested by the user." },
         "loanStatus": { "type": "string", "description": "The status of the loan (approved, rejected)." },
         "loanReason": { "type": "string", "description": "The AI rationale for the loan status." },
         "creditScore": { "type": "number", "description": "The user's credit score." },
         "annualIncome": { "type": "number", "description": "The user's annual income." },
         "employmentStatus": { "type": "string", "description": "The user's employment status." },
+        "propertyValue": { "type": "number", "description": "The value of the property for a property loan."},
         "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp of when the application was created."}
       },
-      "required": ["id", "fullName", "loanAmount", "loanStatus", "creditScore", "annualIncome", "employmentStatus", "createdAt"]
+      "required": ["id", "fullName", "loanType", "loanAmount", "loanStatus", "creditScore", "annualIncome", "employmentStatus", "createdAt"]
     }
   },
   "auth": {

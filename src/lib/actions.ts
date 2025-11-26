@@ -12,10 +12,12 @@ export async function submitLoanApplication(
 
   // First, get the AI's assessment
   const eligibility = await assessLoanEligibility({
+    loanType: data.loanType,
     loanAmount: data.loanAmount,
     creditScore: data.creditScore,
     annualIncome: data.annualIncome,
     employmentStatus: data.employmentStatus,
+    propertyValue: data.propertyValue,
   });
 
   // Then, save the application data along with the AI's decision

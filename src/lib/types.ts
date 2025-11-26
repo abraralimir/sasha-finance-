@@ -24,10 +24,12 @@ export interface User {
 
 export interface LoanApplicationData {
     fullName: string;
+    loanType: 'personal' | 'property';
     loanAmount: number;
     creditScore: number;
     annualIncome: number;
     employmentStatus: 'employed' | 'unemployed' | 'self-employed' | 'student';
+    propertyValue?: number;
 }
 
 export interface BankDetails {

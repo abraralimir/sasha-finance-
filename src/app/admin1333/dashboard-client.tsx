@@ -1,6 +1,6 @@
 'use client';
 
-import { CheckCircle, XCircle } from 'lucide-react';
+import { CheckCircle, Home, User, XCircle } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -24,6 +24,17 @@ const StatusIcon = ({ status }: { status: 'approved' | 'rejected' }) => {
   }
 };
 
+const LoanTypeIcon = ({ type }: { type: 'personal' | 'property' | undefined }) => {
+    switch (type) {
+        case 'personal':
+            return <User className="h-5 w-5 text-blue-400" />;
+        case 'property':
+            return <Home className="h-5 w-5 text-orange-400" />;
+        default:
+            return null;
+    }
+}
+
 export default function DashboardClient({
   initialApplications,
 }: {
@@ -38,6 +49,7 @@ export default function DashboardClient({
             <TableHeader>
               <TableRow>
                 <TableHead>Full Name</TableHead>
+                <TableHead>Loan Type</TableHead>
                 <TableHead>Loan Status</TableHead>
                 <TableHead className="text-right">Loan Amount</TableHead>
                 <TableHead>Credit Score</TableHead>
@@ -49,6 +61,12 @@ export default function DashboardClient({
               {initialApplications.map(app => (
                 <TableRow key={app.id}>
                   <TableCell className="font-medium">{app.fullName || 'N/A'}</TableCell>
+                  <TableCell>
+                     <div className="flex items-center gap-2">
+                        <LoanTypeIcon type={app.loanType} />
+                        <span className="capitalize">{app.loanType || 'N/A'}</span>
+                    </div>
+                  </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
                         <StatusIcon status={app.loanStatus} />
