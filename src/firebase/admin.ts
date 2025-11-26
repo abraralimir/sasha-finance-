@@ -1,6 +1,10 @@
 import { initializeApp, getApps, App, cert, ServiceAccount } from 'firebase-admin/app';
+import { config } from 'dotenv';
 
 // IMPORTANT: This file is for SERVER-SIDE use only.
+
+// Load environment variables from .env file
+config();
 
 // Memoization variable to store the initialized app.
 let adminApp: App | null = null;
