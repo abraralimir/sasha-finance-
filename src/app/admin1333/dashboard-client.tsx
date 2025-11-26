@@ -43,6 +43,7 @@ export default function DashboardClient({
             <TableHeader>
               <TableRow>
                 <TableHead>Full Name</TableHead>
+                <TableHead>Email</TableHead>
                 <TableHead>Loan Status</TableHead>
                 <TableHead className="text-right">Loan Amount</TableHead>
                 <TableHead>AI Reason</TableHead>
@@ -52,6 +53,7 @@ export default function DashboardClient({
               {initialUsers.map(user => (
                 <TableRow key={user.id}>
                   <TableCell className="font-medium">{user.fullName || 'N/A'}</TableCell>
+                  <TableCell>{user.email}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
                         <StatusIcon status={user.loanStatus} />

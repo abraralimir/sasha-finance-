@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import type { User, LoginFormData } from '@/lib/types';
+import type { User } from '@/lib/types';
 import { loginUser } from '@/lib/actions';
 import HomeDashboard from './home-dashboard';
 import { useToast } from '@/hooks/use-toast';
@@ -15,6 +15,8 @@ import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 import { KeyRound, Loader2, LogIn } from 'lucide-react';
 import AurumLogo from '../aurum-logo';
+import { useAuth } from '@/firebase';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 
 const loginSchema = z.object({
   fullName: z.string().min(1, 'Please enter your full name.'),
@@ -25,6 +27,7 @@ export default function UserFlowController() {
   const [user, setUser] = useState<User | null>(null);
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
+  const auth = useAuth();
 
   const form = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
@@ -38,7 +41,25 @@ export default function UserFlowController() {
     startTransition(async () => {
       try {
         const loggedInUser = await loginUser(values);
-        if (loggedInUser) {
+        if (loggedInUser && loggedInUser.email) {
+          // Sign in with the user's "email" and a generic password/secret.
+          // In a real app, this would be a more secure custom token flow.
+          await signInWithEmailAndPassword(auth, loggedInUser.email, loggedInUser.secretKey).catch(async (error) => {
+             // If the user does not exist in Auth, create it. This can happen if admin created user in DB but not Auth
+            if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
+               try {
+                await createUserWithEmailAndPassword(auth, loggedInUser.email, loggedInUser.secretKey);
+                // and sign in again
+                await signInWithEmailAndPassword(auth, loggedInUser.email, loggedInUser.secretKey);
+               } catch (creationError) {
+                  // This might fail if the user was created in another race condition.
+                  // We can try signing in one last time.
+                  await signInWithEmailAndPassword(auth, loggedInUser.email, loggedInUser.secretKey);
+               }
+            } else {
+              throw error;
+            }
+          });
           setUser(loggedInUser);
         } else {
           toast({
@@ -48,6 +69,7 @@ export default function UserFlowController() {
           });
         }
       } catch (error) {
+        console.error(error);
         toast({
           title: 'Login Error',
           description: error instanceof Error ? error.message : 'An unknown error occurred.',

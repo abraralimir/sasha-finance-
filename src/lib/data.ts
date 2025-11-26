@@ -1,55 +1,96 @@
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  query,
+  setDoc,
+  where,
+  getFirestore,
+} from 'firebase-admin/firestore';
+import { initAdmin } from '@/firebase/admin';
 import type { User } from './types';
-import { v4 as uuidv4 } from 'uuid';
 
-// In-memory store to simulate a database. This will reset on server restart.
-const users: Map<string, User> = new Map();
+// In a real app, this would be initialized once and provided via context
+const firestore = getFirestore(initAdmin());
+const usersCollection = collection(firestore, 'users');
 
 // Helper to get a random item from an array
 const getRandomItem = <T>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
 
-export const addNewUser = (fullName: string, secretKey: string): User => {
-    const id = uuidv4();
-    const newUser: User = {
-        id,
-        fullName,
-        secretKey,
-        kycStatus: 'approved', // Auto-approved since we removed KYC flow
-        loanStatus: 'none',
-        creditScore: Math.floor(Math.random() * (850 - 300 + 1)) + 300,
-        annualIncome: Math.floor(Math.random() * (200000 - 30000 + 1)) + 30000,
-        employmentStatus: getRandomItem(['employed', 'self-employed', 'unemployed', 'student']),
-    };
-    users.set(id, newUser);
-    return newUser;
+export const addNewUser = async (
+  userId: string,
+  email: string,
+  fullName: string,
+  secretKey: string
+): Promise<User> => {
+  const newUser: User = {
+    id: userId,
+    email,
+    fullName,
+    secretKey,
+    kycStatus: 'approved', // Auto-approved since we removed KYC flow
+    loanStatus: 'none',
+    creditScore: Math.floor(Math.random() * (850 - 300 + 1)) + 300,
+    annualIncome: Math.floor(Math.random() * (200000 - 30000 + 1)) + 30000,
+    employmentStatus: getRandomItem(['employed', 'self-employed', 'unemployed', 'student']),
+  };
+  const userDocRef = doc(usersCollection, userId);
+  await setDoc(userDocRef, newUser);
+  return newUser;
 };
 
-export const findUserByCredentials = (fullName: string, secretKey: string): User | undefined => {
-    for (const user of users.values()) {
-        if (user.fullName === fullName && user.secretKey === secretKey) {
-            return user;
-        }
-    }
+export const findUserByCredentials = async (
+  fullName: string,
+  secretKey: string
+): Promise<User | undefined> => {
+  const q = query(
+    usersCollection,
+    where('fullName', '==', fullName)
+    // We can't query by secretKey directly for security reasons.
+    // We find by name and will verify the key on the client.
+  );
+
+  const querySnapshot = await getDocs(q);
+  if (querySnapshot.empty) {
     return undefined;
+  }
+  
+  // Assuming fullName + secretKey is unique
+  const userDoc = querySnapshot.docs[0];
+  const userData = { id: userDoc.id, ...userDoc.data() } as User;
+
+  // IMPORTANT: The secretKey check now happens on the client during login
+  if (userData.secretKey === secretKey) {
+    return userData;
+  }
+
+  return undefined;
 };
 
+export const getUser = async (userId: string): Promise<User | undefined> => {
+  const userDocRef = doc(usersCollection, userId);
+  const docSnap = await getDoc(userDocRef);
 
-export const getUser = (userId: string): User | undefined => {
-  return users.get(userId);
+  if (docSnap.exists()) {
+    return { id: docSnap.id, ...docSnap.data() } as User;
+  }
+  return undefined;
 };
 
-export const updateUser = (userId: string, data: Partial<User>): User => {
-  const user = users.get(userId);
+export const updateUser = async (userId: string, data: Partial<User>): Promise<User> => {
+  const userDocRef = doc(usersCollection, userId);
+  const user = await getUser(userId);
   if (!user) {
     throw new Error('User not found');
   }
-  const updatedUser = { ...user, ...data };
-  users.set(userId, updatedUser);
-  return updatedUser;
+
+  const updatedData = { ...user, ...data };
+  await setDoc(userDocRef, updatedData, { merge: true });
+  return updatedData;
 };
 
-export const getAllUsers = (): User[] => {
-  return Array.from(users.values());
+export const getAllUsers = async (): Promise<User[]> => {
+  const snapshot = await getDocs(usersCollection);
+  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
 };
-
-// Pre-create a user for demo purposes
-addNewUser('Jane Doe', '1234');

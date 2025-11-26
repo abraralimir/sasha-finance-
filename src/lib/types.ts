@@ -3,10 +3,10 @@ export type LoanStatus = 'none' | 'pending' | 'review' | 'approved' | 'rejected'
 
 export interface User {
   id: string;
+  email: string;
   fullName: string;
   secretKey: string;
   kycStatus: KycStatus;
-  kycReason?: string;
   loanAmount?: number;
   loanStatus: LoanStatus;
   loanReason?: string;
