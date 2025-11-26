@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
 import {
   ChartContainer,
   ChartTooltip,
@@ -74,9 +73,9 @@ export default function MutualFundCalculator() {
             </div>
             <Slider
               id="total-investment"
-              min={10000}
+              min={1000}
               max={10000000}
-              step={10000}
+              step={1000}
               value={[totalInvestment]}
               onValueChange={vals => setTotalInvestment(vals[0])}
             />
@@ -103,7 +102,7 @@ export default function MutualFundCalculator() {
             <Slider
               id="time-period"
               min={1}
-              max={40}
+              max={5}
               step={1}
               value={[timePeriod]}
               onValueChange={vals => setTimePeriod(vals[0])}

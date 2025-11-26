@@ -2,6 +2,12 @@ import MainHeader from '@/components/main-header';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import MutualFundCalculator from '@/components/user/mutual-fund-calculator';
 import SipCalculator from '@/components/user/sip-calculator';
+import { Metadata } from 'next';
+
+export const metadata: Metadata = {
+    title: 'Financial Investment Calculators',
+    description: 'Plan your investments with our SIP and Mutual Fund (lump sum) calculators. Project your returns and visualize your wealth growth.',
+};
 
 export default function ToolsPage() {
   return (

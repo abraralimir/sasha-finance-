@@ -1,8 +1,19 @@
 import DashboardClient from './dashboard-client';
 import MainHeader from '@/components/main-header';
 import { getAllApplications } from '@/lib/data';
+import { Metadata } from 'next';
 
 export const dynamic = 'force-dynamic';
+
+export const metadata: Metadata = {
+  title: 'Admin Dashboard',
+  description: 'View all submitted loan applications.',
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
+
 
 export default async function AdminPage() {
   const applications = await getAllApplications();

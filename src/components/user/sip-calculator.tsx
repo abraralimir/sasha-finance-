@@ -26,7 +26,7 @@ const chartConfig = {
 export default function SipCalculator() {
   const [monthlyInvestment, setMonthlyInvestment] = useState(10000);
   const [returnRate, setReturnRate] = useState(12);
-  const [timePeriod, setTimePeriod] = useState(10);
+  const [timePeriod, setTimePeriod] = useState(5);
 
   const calculateFutureValue = () => {
     const i = returnRate / 100 / 12; // monthly interest rate
@@ -115,7 +115,7 @@ export default function SipCalculator() {
             <Slider
               id="time-period"
               min={1}
-              max={40}
+              max={5}
               step={1}
               value={[timePeriod]}
               onValueChange={vals => setTimePeriod(vals[0])}

@@ -1,5 +1,11 @@
 import LoanApplicationFlow from '@/components/user/loan-application-flow';
 import MainHeader from '@/components/main-header';
+import { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'AI-Powered Loan Application',
+  description: 'Apply for a personal or property loan with our intelligent AI assistant. Get a decision in minutes.',
+};
 
 export default function AurumFinancePage() {
   return (
