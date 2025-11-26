@@ -1,0 +1,128 @@
+/**
+ * Core Philosophy: This ruleset enforces a strict user-ownership model. All data is
+ * either located within a user's private data tree (e.g., /users/{userId}/...) or
+ * explicitly linked to a user via an internal `userId` field. The default security
+ * posture is to deny all access unless a rule explicitly grants it to the authenticated
+ * owner of the data.
+ *
+ * Data Structure: The data is organized into three main collections:
+ * 1. /users/{userId}: A top-level collection storing user profile documents. The
+ *    document ID is the user's Firebase Auth UID.
+ * 2. /users/{userId}/loanRequests: A subcollection containing loan requests specific
+ *    to that user, providing clear, path-based ownership.
+ * 3. /KYCVerifications: A top-level collection for KYC documents. Access is controlled
+ *    not by the path, but by a `userId` field within each document, linking it back
+ *    to a specific user.
+ *
+ * Key Security Decisions:
+ * - User Enumeration Prevention: Listing the top-level `/users` and `/KYCVerifications`
+ *   collections is strictly forbidden to prevent attackers from discovering user IDs.
+ * - Path and Data Consistency: For all created documents, rules enforce that the
+ *   internal ownership field (e.g., `userId`) matches the ownership context of the
+ *   path it's being written to. This prevents data from being mis-assigned.
+ * - Immutability of Ownership: Once a document is created, its core ownership link
+ *   (e.g., the `userId` field) cannot be changed. This is enforced on all update operations.
+ * - Prototyping Flexibility: These rules focus exclusively on authorization. They do not
+ *   validate the shape or data types of documents, allowing for rapid front-end
+ *   development and iteration on the data model without needing to update security rules.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // -------------------------------------------------------------------------
+    // Helper Functions
+    // -------------------------------------------------------------------------
+
+    /**
+     * Returns true if the user is authenticated.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * Returns true if the authenticated user's UID matches the provided userId.
+     * This is used for path-based ownership checks.
+     */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    /**
+     * Returns true if the user is the owner AND the document already exists.
+     * This is a critical check for all update and delete operations.
+     */
+    function isExistingOwner(userId) {
+      return isOwner(userId) && resource != null;
+    }
+
+    /**
+     * Returns true if the user's UID matches the `userId` field in a document.
+     * This is used for documents in top-level collections like KYCVerifications.
+     */
+    function isResourceOwner() {
+      return isSignedIn() && request.auth.uid == resource.data.userId;
+    }
+    
+    /**
+     * Returns true if the user is the resource owner AND the document exists.
+     * Used for secure updates/deletes on documents in top-level collections.
+     */
+    function isExistingResourceOwner() {
+        return isResourceOwner() && resource != null;
+    }
+
+    // -------------------------------------------------------------------------
+    // Collection Rules
+    // -------------------------------------------------------------------------
+
+    /**
+     * @description Controls access to user profile documents.
+     * @path /users/{userId}
+     * @allow (create) An authenticated user creating their own profile document.
+     * @deny  (list) A user trying to list all user profiles in the system.
+     * @deny  (get) A user trying to read another user's profile.
+     * @principle Restricts access to a user's own data tree and allows self-creation.
+     */
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow list: if false;
+      allow create: if isOwner(userId) && request.resource.data.id == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Controls access to a user's private loan requests.
+     * @path /users/{userId}/loanRequests/{loanRequestId}
+     * @allow (create) An authenticated user creating a loan request for themselves.
+     * @allow (list) An authenticated user listing their own past loan requests.
+     * @deny  (get) A user attempting to read a loan request from another user's profile.
+     * @principle Enforces strict document ownership within a user-specific subcollection.
+     */
+    match /users/{userId}/loanRequests/{loanRequestId} {
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId) && request.resource.data.userId == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Controls access to sensitive KYC verification documents.
+     * @path /KYCVerifications/{kycVerificationId}
+     * @allow (get) A user reading their own KYC document by its specific ID.
+     * @deny  (list) Any user attempting to list all KYC documents, which would be a major data leak.
+     * @deny  (update) A user trying to modify another person's KYC document.
+     * @principle Validates ownership based on a `userId` field within the document itself, as this is a top-level collection.
+     */
+    match /KYCVerifications/{kycVerificationId} {
+      allow get: if isResourceOwner();
+      allow list: if false;
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update: if isExistingResourceOwner() && request.resource.data.userId == resource.data.userId;
+      allow delete: if isExistingResourceOwner();
+    }
+  }
+}

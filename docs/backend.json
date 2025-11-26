@@ -1,0 +1,183 @@
+{
+  "entities": {
+    "UserProfile": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "UserProfile",
+      "type": "object",
+      "description": "Represents a user profile in the Aurum Finance application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the user profile."
+        },
+        "fullName": {
+          "type": "string",
+          "description": "The user's full legal name."
+        },
+        "email": {
+          "type": "string",
+          "description": "The user's email address.",
+          "format": "email"
+        },
+        "kycStatus": {
+          "type": "string",
+          "description": "The KYC verification status of the user (e.g., pending, approved, rejected)."
+        },
+        "documentNumber": {
+          "type": "string",
+          "description": "The document number provided by the user for KYC."
+        },
+        "homePageAccess": {
+          "type": "boolean",
+          "description": "A boolean value indicating whether the user has access to the home page."
+        }
+      },
+      "required": [
+        "id",
+        "fullName",
+        "email",
+        "kycStatus",
+        "documentNumber"
+      ]
+    },
+    "LoanRequest": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "LoanRequest",
+      "type": "object",
+      "description": "Represents a loan request submitted by a user.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the loan request."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to the UserProfile who submitted the loan request. (Relationship: UserProfile 1:N LoanRequest)"
+        },
+        "amountRequested": {
+          "type": "number",
+          "description": "The amount of loan requested by the user."
+        },
+        "loanStatus": {
+          "type": "string",
+          "description": "The status of the loan request (e.g., pending, approved, rejected)."
+        },
+        "aiAssessmentRationale": {
+          "type": "string",
+          "description": "The rationale provided by the AI for the loan assessment."
+        },
+        "adminDecision": {
+          "type": "string",
+          "description": "The decision made by the admin (if any) to override the AI assessment."
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "amountRequested",
+        "loanStatus"
+      ]
+    },
+    "KYCVerification": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "KYCVerification",
+      "type": "object",
+      "description": "Represents the KYC verification details for a user.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the KYC verification record."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to the UserProfile associated with this KYC verification. (Relationship: UserProfile 1:1 KYCVerification)"
+        },
+        "faceScanResult": {
+          "type": "string",
+          "description": "The result of the face scan analysis."
+        },
+        "documentVerificationResult": {
+          "type": "string",
+          "description": "The result of the document verification process."
+        },
+        "geminiAnalysis": {
+          "type": "string",
+          "description": "The analysis results provided by Gemini AI."
+        },
+        "adminReviewNotes": {
+          "type": "string",
+          "description": "Notes added by the admin during the KYC review process."
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "faceScanResult",
+        "documentVerificationResult"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "UserProfile",
+          "schema": {
+            "$ref": "#/backend/entities/UserProfile"
+          },
+          "description": "Stores user profile information. The 'userId' is the Firebase Auth UID. This path provides path-based ownership for user-specific data.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The Firebase Auth UID of the user."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/loanRequests/{loanRequestId}",
+        "definition": {
+          "entityName": "LoanRequest",
+          "schema": {
+            "$ref": "#/backend/entities/LoanRequest"
+          },
+          "description": "Stores loan requests submitted by a user. This subcollection is user-owned, with 'userId' matching the user's Auth UID. This path provides explicit path-based ownership for loan requests.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The Firebase Auth UID of the user who submitted the loan request."
+            },
+            {
+              "name": "loanRequestId",
+              "description": "The unique ID of the loan request."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/KYCVerifications/{kycVerificationId}",
+        "definition": {
+          "entityName": "KYCVerification",
+          "schema": {
+            "$ref": "#/backend/entities/KYCVerification"
+          },
+          "description": "Stores KYC verification information.  The userId is stored within the document to link KYC to a specific user. Admin access is managed separately (not part of this document), facilitating clear separation of concerns.",
+          "params": [
+            {
+              "name": "kycVerificationId",
+              "description": "The unique ID of the KYC verification record."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure is designed to ensure Authorization Independence, support the required QAPs, and adhere to the specified design principles.  User profiles, loan requests, and KYC verifications are stored in separate collections to maintain clarity and segregation of concerns. The structure facilitates the app's core features: KYC Verification, Admin Verification, AI-Powered Loan Assessment, Real-Time Approval/Rejection Notification, and Secure User Home Page.\n\nAuthorization Independence is achieved through the following:\n\n*   **Loan Requests:** The `loanRequests` subcollection is created under each user's profile (`/users/{userId}/loanRequests/{loanRequestId}`).  This ensures that each loan request inherently belongs to a user, simplifying security rules as access control is directly tied to the user's ID.\n*   **KYC Verifications:** A dedicated KYCVerification collection stores KYC data. The userId links KYC to a specific user, making it straightforward to implement security rules based on user identity without requiring complex `get()` calls to parent documents.\n\nQAPs (Rules are not Filters) are supported as follows:\n\n*   **Secure List Operations:**  Since loan requests and KYC data are stored in dedicated user-owned subcollections, listing operations are inherently secure.  Rules can easily enforce that only the user associated with a specific `{userId}` can list their own loan requests or KYC data.\n*   **Segregation and Membership Models:** The separation of data into different collections based on access needs (user profiles vs. loan requests vs. KYC data) ensures that rules can be applied consistently and efficiently.\n\nIn summary, the design prioritizes a flat, de-normalized structure wherever feasible to eliminate hierarchical dependencies and enable secure, scalable, and easily debuggable security rules."
+  }
+}
