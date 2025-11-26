@@ -14,8 +14,12 @@ service cloud.firestore {
 
     // Rules for the 'users' collection
     match /users/{userId} {
-      // Allow read, create, and update only for the owner of the document
-      allow read, create, update, delete: if isSignedIn() && isOwner(userId);
+      // Allow a user to create their own account.
+      // Allow any signed-in user (like an admin) to create a new user document.
+      allow create: if isSignedIn();
+      
+      // Allow read, update, and delete only for the owner of the document.
+      allow read, update, delete: if isSignedIn() && isOwner(userId);
 
       // Disallow listing all users to prevent user enumeration
       allow list: if false;

@@ -1,11 +1,13 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { onboardNewUser } from '@/lib/actions';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/firebase';
+import { signInAnonymously } from 'firebase/auth';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,6 +25,22 @@ const formSchema = z.object({
 export default function AddUserPage() {
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
+  const auth = useAuth();
+
+  useEffect(() => {
+    // Ensure admin is signed in anonymously to have permission to write to Firestore
+    if (auth && !auth.currentUser) {
+      signInAnonymously(auth).catch((error) => {
+        console.error("Anonymous sign-in failed", error);
+        toast({
+          title: 'Authentication Error',
+          description: 'Could not authenticate admin session. Please refresh the page.',
+          variant: 'destructive'
+        });
+      });
+    }
+  }, [auth, toast]);
+
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
