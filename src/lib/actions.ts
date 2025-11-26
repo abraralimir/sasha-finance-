@@ -1,6 +1,5 @@
 'use server';
 
-import 'dotenv/config';
 import { revalidatePath } from 'next/cache';
 import { assessLoanEligibility } from '@/ai/flows/loan-eligibility-assessment';
 import { addNewUser, findUserByCredentials, getUser, updateUser, getAllUsers } from '@/lib/data';
@@ -9,7 +8,6 @@ import { getAuth } from 'firebase-admin/auth';
 import { initAdmin } from '@/firebase/admin';
 
 // Initialize Firebase Admin for server-side actions.
-// This call is now safe because admin.ts is purely server-side.
 const adminApp = initAdmin();
 const adminAuth = getAuth(adminApp);
 
