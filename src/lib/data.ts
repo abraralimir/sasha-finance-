@@ -7,37 +7,31 @@ const users: Map<string, User> = new Map();
 // Helper to get a random item from an array
 const getRandomItem = <T>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
 
-// Function to create a new user with some random data for loan assessment simulation
-const createNewUser = (id: string): User => ({
-  id,
-  kycStatus: 'unverified',
-  loanStatus: 'none',
-  creditScore: Math.floor(Math.random() * (850 - 300 + 1)) + 300, // Random score between 300-850
-  annualIncome: Math.floor(Math.random() * (200000 - 30000 + 1)) + 30000, // Random income between 30k-200k
-  employmentStatus: getRandomItem(['employed', 'self-employed', 'unemployed', 'student']),
-});
-
-export const addNewUser = (fullName: string, photoUrl: string): User => {
+export const addNewUser = (fullName: string, secretKey: string): User => {
     const id = uuidv4();
     const newUser: User = {
         id,
         fullName,
-        faceScanImageUri: photoUrl,
-        kycStatus: 'new',
+        secretKey,
+        kycStatus: 'approved', // Auto-approved since we removed KYC flow
         loanStatus: 'none',
+        creditScore: Math.floor(Math.random() * (850 - 300 + 1)) + 300,
+        annualIncome: Math.floor(Math.random() * (200000 - 30000 + 1)) + 30000,
+        employmentStatus: getRandomItem(['employed', 'self-employed', 'unemployed', 'student']),
     };
     users.set(id, newUser);
     return newUser;
 };
 
-export const getOrCreateUser = (userId: string): User => {
-  if (users.has(userId)) {
-    return users.get(userId)!;
-  }
-  const newUser = createNewUser(userId);
-  users.set(userId, newUser);
-  return newUser;
+export const findUserByCredentials = (fullName: string, secretKey: string): User | undefined => {
+    for (const user of users.values()) {
+        if (user.fullName === fullName && user.secretKey === secretKey) {
+            return user;
+        }
+    }
+    return undefined;
 };
+
 
 export const getUser = (userId: string): User | undefined => {
   return users.get(userId);
@@ -57,5 +51,5 @@ export const getAllUsers = (): User[] => {
   return Array.from(users.values());
 };
 
-// Initialize the default user
-getOrCreateUser('default_user');
+// Pre-create a user for demo purposes
+addNewUser('Jane Doe', '1234');

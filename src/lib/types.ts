@@ -3,10 +3,8 @@ export type LoanStatus = 'none' | 'pending' | 'review' | 'approved' | 'rejected'
 
 export interface User {
   id: string;
-  fullName?: string;
-  documentNumber?: string;
-  documentImageUri?: string;
-  faceScanImageUri?: string;
+  fullName: string;
+  secretKey: string;
   kycStatus: KycStatus;
   kycReason?: string;
   loanAmount?: number;
@@ -18,12 +16,12 @@ export interface User {
   employmentStatus?: 'employed' | 'unemployed' | 'self-employed' | 'student';
 }
 
-export interface KycFormData {
+export interface OnboardUserFormData {
   fullName: string;
-  documentNumber: string;
+  secretKey: string;
 }
 
-export interface NewUserFormData {
+export interface LoginFormData {
   fullName: string;
-  photoUrl: string;
+  secretKey: string;
 }

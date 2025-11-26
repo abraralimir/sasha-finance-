@@ -1,76 +1,124 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import type { User } from '@/lib/types';
-import { getUserData } from '@/lib/actions';
-import KycFlow from './kyc-flow';
+import { useState, useTransition } from 'react';
+import type { User, LoginFormData } from '@/lib/types';
+import { loginUser } from '@/lib/actions';
 import HomeDashboard from './home-dashboard';
-import StatusView from './status-view';
-import { Loader2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import AnimatedBox from '../animated-box';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '../ui/form';
+import { Input } from '../ui/input';
+import { Button } from '../ui/button';
+import { KeyRound, Loader2, LogIn } from 'lucide-react';
+import AurumLogo from '../aurum-logo';
 
-const MOCK_USER_ID = 'default_user';
+const loginSchema = z.object({
+  fullName: z.string().min(1, 'Please enter your full name.'),
+  secretKey: z.string().min(1, 'Please enter your secret key.'),
+});
 
 export default function UserFlowController() {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [isPending, startTransition] = useTransition();
+  const { toast } = useToast();
 
-  useEffect(() => {
-    const fetchUser = async () => {
+  const form = useForm<z.infer<typeof loginSchema>>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      fullName: '',
+      secretKey: '',
+    },
+  });
+
+  const handleLogin = (values: z.infer<typeof loginSchema>) => {
+    startTransition(async () => {
       try {
-        const userData = await getUserData();
-        setUser(userData);
+        const loggedInUser = await loginUser(values);
+        if (loggedInUser) {
+          setUser(loggedInUser);
+        } else {
+          toast({
+            title: 'Login Failed',
+            description: 'Invalid name or secret key. Please try again.',
+            variant: 'destructive',
+          });
+        }
       } catch (error) {
-        console.error("Failed to fetch user data:", error);
-      } finally {
-        setLoading(false);
+        toast({
+          title: 'Login Error',
+          description: error instanceof Error ? error.message : 'An unknown error occurred.',
+          variant: 'destructive',
+        });
       }
-    };
-
-    fetchUser();
-  }, []);
-
-  // Polling mechanism to check for status updates
-  useEffect(() => {
-    if (!user || (user.kycStatus !== 'pending' && user.loanStatus !== 'pending' && user.loanStatus !== 'review')) {
-      return;
-    }
-
-    const interval = setInterval(async () => {
-      const updatedUser = await getUserData();
-      if (updatedUser.kycStatus !== user.kycStatus || updatedUser.loanStatus !== user.loanStatus) {
-        setUser(updatedUser);
-      }
-    }, 5000); // Poll every 5 seconds
-
-    return () => clearInterval(interval);
-  }, [user]);
-
-  const handleKycSuccess = (updatedUser: User) => {
+    });
+  };
+  
+  const handleUpdate = (updatedUser: User) => {
     setUser(updatedUser);
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-full text-primary">
-        <Loader2 className="h-12 w-12 animate-spin" />
-      </div>
-    );
+  if (user) {
+    return <HomeDashboard user={user} onUpdate={handleUpdate} />;
   }
 
-  if (!user) {
-    return <StatusView status="error" title="Error" message="Could not load user data." />;
-  }
-  
-  switch (user.kycStatus) {
-    case 'unverified':
-      return <KycFlow onKycSuccess={handleKycSuccess} />;
-    case 'pending':
-      return <StatusView status="pending" title="Verification Pending" message={user.kycReason || 'Your information is being verified.'} />;
-    case 'rejected':
-      return <StatusView status="rejected" title="Verification Rejected" message={user.kycReason || 'Your KYC verification failed.'} />;
-    case 'approved':
-      return <HomeDashboard user={user} onUpdate={setUser} />;
-    default:
-      return <StatusView status="error" title="Error" message="An unknown error occurred." />;
-  }
+  return (
+    <AnimatedBox className="w-full max-w-md">
+      <Card className="bg-card/80 backdrop-blur-sm border-primary/20 shadow-lg shadow-primary/5">
+        <CardHeader className="text-center">
+            <div className="flex justify-center mb-4">
+                <AurumLogo />
+            </div>
+          <CardTitle className="font-headline text-3xl text-primary">
+            Welcome to Aurum Finance
+          </CardTitle>
+          <CardDescription>
+            Enter your credentials to access your secure financing portal.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleLogin)} className="space-y-6">
+              <FormField
+                control={form.control}
+                name="fullName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Full Legal Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Jane Doe" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="secretKey"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Secret Key</FormLabel>
+                    <FormControl>
+                        <div className="relative">
+                            <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                            <Input type="password" placeholder="••••••••" {...field} className="pl-10" />
+                        </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <Button type="submit" disabled={isPending} className="w-full" size="lg">
+                {isPending ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <LogIn className="mr-2 h-5 w-5" />}
+                Secure Login
+              </Button>
+            </form>
+          </Form>
+        </CardContent>
+      </Card>
+    </AnimatedBox>
+  );
 }

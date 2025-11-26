@@ -29,7 +29,7 @@ export default function LoanChatter({ user, onUpdate }: LoanChatterProps) {
 
     startTransition(async () => {
       try {
-        const updatedUser = await submitLoanRequest(amount);
+        const updatedUser = await submitLoanRequest(user.id, amount);
         onUpdate(updatedUser);
         toast({ title: 'Request Submitted', description: 'Your loan request is being assessed by our AI.' });
       } catch (error) {
@@ -38,28 +38,38 @@ export default function LoanChatter({ user, onUpdate }: LoanChatterProps) {
     });
   };
 
-  if (user.loanStatus !== 'none') {
-    const statusMap = {
-        pending: { status: 'pending', title: 'Assessing Application...' },
-        review: { status: 'pending', title: 'Pending Admin Review' },
-        approved: { status: 'approved', title: 'Loan Approved!' },
-        rejected: { status: 'rejected', title: 'Loan Application Rejected' },
-    };
-    
-    const currentStatus = statusMap[user.loanStatus as keyof typeof statusMap];
+  const statusMap = {
+      pending: { status: 'pending', title: 'Assessing Application...' },
+      review: { status: 'pending', title: 'AI assessment complete...' }, // Simplified this state
+      approved: { status: 'approved', title: 'Loan Approved!' },
+      rejected: { status: 'rejected', title: 'Loan Application Rejected' },
+  };
 
-    if (currentStatus) {
-        if (currentStatus.status === 'approved') {
-            return (
-                <div className="text-center p-8">
-                    <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
-                    <h3 className="font-headline text-3xl text-primary">{currentStatus.title}</h3>
-                    <p className="text-muted-foreground mt-2">{user.loanReason}</p>
-                </div>
-            );
-        }
-        return <StatusView status={currentStatus.status as any} title={currentStatus.title} message={user.loanReason || ''} />;
+  const currentStatusKey = user.loanStatus as keyof typeof statusMap;
+
+  if (user.loanStatus !== 'none' && statusMap[currentStatusKey]) {
+    const currentStatus = statusMap[currentStatusKey];
+    
+    if (currentStatus.status === 'approved') {
+        return (
+            <div className="text-center p-8">
+                <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
+                <h3 className="font-headline text-3xl text-primary">{currentStatus.title}</h3>
+                <p className="text-muted-foreground mt-2">{user.loanReason}</p>
+                <p className="font-bold text-2xl text-foreground mt-4">${user.loanAmount?.toLocaleString()}</p>
+            </div>
+        );
     }
+     if (currentStatus.status === 'rejected') {
+        return (
+            <div className="text-center p-8">
+                <XCircle className="h-16 w-16 text-destructive mx-auto mb-4" />
+                <h3 className="font-headline text-3xl text-primary">{currentStatus.title}</h3>
+                <p className="text-muted-foreground mt-2">{user.loanReason}</p>
+            </div>
+        );
+    }
+    return <StatusView status={currentStatus.status as any} title={currentStatus.title} message={user.loanReason || ''} />;
   }
 
   return (

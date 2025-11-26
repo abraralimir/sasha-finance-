@@ -1,76 +1,32 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { kycAssessment } from '@/ai/flows/kyc-assessment';
 import { assessLoanEligibility } from '@/ai/flows/loan-eligibility-assessment';
-import { summarizeUserLoanDetails } from '@/ai/flows/summarize-user-loan-details';
-import { addNewUser, getOrCreateUser, getUser, updateUser, getAllUsers } from '@/lib/data';
-import type { KycFormData, User, NewUserFormData } from '@/lib/types';
-import { PlaceHolderImages } from './placeholder-images';
+import { addNewUser, findUserByCredentials, getUser, updateUser, getAllUsers } from '@/lib/data';
+import type { OnboardUserFormData, User, LoginFormData } from '@/lib/types';
 
-const MOCK_USER_ID = 'default_user';
 
-// Function to convert image URL to data URI (simulated)
-// In a real app, this would involve fetching the image and base64 encoding it.
-const toDataUri = (url: string) => {
-  const extension = url.split('.').pop();
-  let mimeType = 'image/jpeg';
-  if (extension === 'png') mimeType = 'image/png';
-  return `data:${mimeType};base64,simulated_base64_data_for_${url}`;
-};
-
-export async function getUserData(): Promise<User> {
-  return getOrCreateUser(MOCK_USER_ID);
+export async function loginUser(credentials: LoginFormData): Promise<User | null> {
+    const user = findUserByCredentials(credentials.fullName, credentials.secretKey);
+    if (!user) {
+        return null;
+    }
+    // In a real app, we would issue a session token. Here we just return the user.
+    return user;
 }
 
-export async function submitKyc(formData: KycFormData): Promise<User> {
-  const docImage = PlaceHolderImages.find(img => img.id === 'doc-scan');
-  const faceImage = PlaceHolderImages.find(img => img.id === 'face-scan');
-
-  if (!docImage || !faceImage) {
-    throw new Error('Placeholder images not found');
-  }
-
-  updateUser(MOCK_USER_ID, {
-    fullName: formData.fullName,
-    documentNumber: formData.documentNumber,
-    documentImageUri: docImage.imageUrl,
-    faceScanImageUri: faceImage.imageUrl,
-    kycStatus: 'pending',
-    kycReason: 'KYC details submitted. Pending AI verification.',
-  });
-
-  // Simulate a delay for AI processing
-  await new Promise(resolve => setTimeout(resolve, 2000));
-
-  try {
-    const result = await kycAssessment({
-      fullName: formData.fullName,
-      documentNumber: formData.documentNumber,
-      documentImageUri: toDataUri(docImage.imageUrl),
-      faceScanImageUri: toDataUri(faceImage.imageUrl),
-    });
-
-    return updateUser(MOCK_USER_ID, {
-      kycStatus: result.kycPassed ? 'approved' : 'rejected',
-      kycReason: result.reason,
-    });
-  } catch (error) {
-    console.error('KYC Assessment Error:', error);
-    return updateUser(MOCK_USER_ID, {
-      kycStatus: 'rejected',
-      kycReason: 'An error occurred during AI verification. Please try again.',
-    });
-  }
+export async function getUserById(userId: string): Promise<User | null> {
+    const user = getUser(userId);
+    return user || null;
 }
 
-export async function submitLoanRequest(loanAmount: number): Promise<User> {
-  const user = getUser(MOCK_USER_ID);
-  if (!user || user.kycStatus !== 'approved') {
-    throw new Error('User not authorized for loan application.');
+export async function submitLoanRequest(userId: string, loanAmount: number): Promise<User> {
+  const user = getUser(userId);
+  if (!user) {
+    throw new Error('User not found.');
   }
 
-  updateUser(MOCK_USER_ID, {
+  updateUser(userId, {
     loanAmount,
     loanStatus: 'pending',
     loanReason: 'Loan application submitted. Pending AI assessment.',
@@ -87,60 +43,33 @@ export async function submitLoanRequest(loanAmount: number): Promise<User> {
       employmentStatus: user.employmentStatus!,
     });
     
-    // Forcing a review state for demo purposes if eligible
-    const finalStatus = eligibility.isEligible ? 'review' : 'rejected';
-    const finalReason = eligibility.isEligible ? 'AI assessment complete. Pending final admin review.' : eligibility.reason;
+    // AI directly approves or rejects
+    const finalStatus = eligibility.isEligible ? 'approved' : 'rejected';
+    const finalReason = eligibility.reason;
 
-    return updateUser(MOCK_USER_ID, {
+    return updateUser(userId, {
       loanStatus: finalStatus,
       loanReason: finalReason,
     });
   } catch (error) {
     console.error('Loan Assessment Error:', error);
-    return updateUser(MOCK_USER_ID, {
+    return updateUser(userId, {
       loanStatus: 'rejected',
       loanReason: 'An error occurred during AI assessment. Please try again.',
     });
   }
 }
 
-export async function getAdminPageData() {
-  const users = getAllUsers();
-  const summarizedUsers = await Promise.all(
-    users.map(async user => {
-      try {
-        if (!user.fullName || !user.loanAmount) {
-          return { ...user, summary: 'User has not applied for a loan.' };
-        }
-        const summary = await summarizeUserLoanDetails({
-          kycDetails: JSON.stringify({
-            fullName: user.fullName,
-            kycStatus: user.kycStatus,
-            kycReason: user.kycReason,
-          }),
-          loanApplication: JSON.stringify({
-            loanAmount: user.loanAmount,
-            loanStatus: user.loanStatus,
-            loanReason: user.loanReason,
-          }),
-        });
-        return { ...user, summary: summary.summary };
-      } catch (error) {
-        return { ...user, summary: 'Could not generate summary.' };
-      }
-    })
-  );
-  return summarizedUsers;
-}
-
-export async function updateLoanStatus(userId: string, status: 'approved' | 'rejected', reason: string) {
-  updateUser(userId, { loanStatus: status, loanReason: reason });
-  revalidatePath('/admin1333');
-  revalidatePath('/');
-}
-
-export async function onboardNewUser(formData: NewUserFormData): Promise<User> {
-  const newUser = addNewUser(formData.fullName, formData.photoUrl);
-  revalidatePath('/admin1333');
+export async function onboardNewUser(formData: OnboardUserFormData): Promise<User> {
+  // Check if user already exists
+  if (findUserByCredentials(formData.fullName, formData.secretKey)) {
+    throw new Error('A user with these credentials already exists.');
+  }
+  const newUser = addNewUser(formData.fullName, formData.secretKey);
+  revalidatePath('/admin1333/add-user');
   return newUser;
+}
+
+export async function getAllUsersForAdmin() {
+    return getAllUsers();
 }
