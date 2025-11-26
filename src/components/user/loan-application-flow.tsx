@@ -159,7 +159,9 @@ export default function LoanApplicationFlow() {
     setCurrentStep(formSteps.length); // Loading state
     startTransition(async () => {
       try {
-        const { eligibility } = await submitLoanApplication(values);
+        // Explicitly parse with the schema to ensure correct types
+        const parsedData = loanApplicationSchema.parse(values);
+        const { eligibility } = await submitLoanApplication(parsedData);
         setAssessmentResult(eligibility);
         setCurrentStep(formSteps.length + 1); // Go to result step
       } catch (error) {
