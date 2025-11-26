@@ -60,6 +60,7 @@ export async function submitLoanRequest(userId: string, loanAmount: number): Pro
       loanReason: finalReason,
     });
     revalidatePath('/');
+    revalidatePath('/admin1333');
     return updatedUser;
 
   } catch (error) {
@@ -69,6 +70,7 @@ export async function submitLoanRequest(userId: string, loanAmount: number): Pro
       loanReason: 'An error occurred during AI assessment. Please try again.',
     });
     revalidatePath('/');
+    revalidatePath('/admin1333');
     return updatedUser;
   }
 }
