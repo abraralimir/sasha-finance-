@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import AurumLogo from './aurum-logo';
 import { Button } from './ui/button';
-import { UserCog } from 'lucide-react';
+import { UserCog, UserPlus } from 'lucide-react';
 
 const MainHeader = () => {
   return (
@@ -10,11 +10,18 @@ const MainHeader = () => {
         <Link href="/">
           <AurumLogo />
         </Link>
-        <Button variant="outline" size="icon" asChild>
-          <Link href="/admin1333" aria-label="Admin Dashboard">
-            <UserCog className="h-5 w-5 text-primary/80" />
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="icon" asChild>
+            <Link href="/admin1333/add-user" aria-label="Add User">
+              <UserPlus className="h-5 w-5 text-primary/80" />
+            </Link>
+          </Button>
+          <Button variant="outline" size="icon" asChild>
+            <Link href="/admin1333" aria-label="Admin Dashboard">
+              <UserCog className="h-5 w-5 text-primary/80" />
+            </Link>
+          </Button>
+        </div>
       </div>
     </header>
   );

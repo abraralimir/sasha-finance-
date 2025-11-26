@@ -4,8 +4,8 @@ import { revalidatePath } from 'next/cache';
 import { kycAssessment } from '@/ai/flows/kyc-assessment';
 import { assessLoanEligibility } from '@/ai/flows/loan-eligibility-assessment';
 import { summarizeUserLoanDetails } from '@/ai/flows/summarize-user-loan-details';
-import { getOrCreateUser, getUser, updateUser, getAllUsers } from '@/lib/data';
-import type { KycFormData, User } from '@/lib/types';
+import { addNewUser, getOrCreateUser, getUser, updateUser, getAllUsers } from '@/lib/data';
+import type { KycFormData, User, NewUserFormData } from '@/lib/types';
 import { PlaceHolderImages } from './placeholder-images';
 
 const MOCK_USER_ID = 'default_user';
@@ -109,6 +109,9 @@ export async function getAdminPageData() {
   const summarizedUsers = await Promise.all(
     users.map(async user => {
       try {
+        if (!user.fullName || !user.loanAmount) {
+          return { ...user, summary: 'User has not applied for a loan.' };
+        }
         const summary = await summarizeUserLoanDetails({
           kycDetails: JSON.stringify({
             fullName: user.fullName,
@@ -134,4 +137,10 @@ export async function updateLoanStatus(userId: string, status: 'approved' | 'rej
   updateUser(userId, { loanStatus: status, loanReason: reason });
   revalidatePath('/admin1333');
   revalidatePath('/');
+}
+
+export async function onboardNewUser(formData: NewUserFormData): Promise<User> {
+  const newUser = addNewUser(formData.fullName, formData.photoUrl);
+  revalidatePath('/admin1333');
+  return newUser;
 }

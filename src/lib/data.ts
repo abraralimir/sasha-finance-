@@ -1,4 +1,5 @@
 import type { User } from './types';
+import { v4 as uuidv4 } from 'uuid';
 
 // In-memory store to simulate a database. This will reset on server restart.
 const users: Map<string, User> = new Map();
@@ -15,6 +16,19 @@ const createNewUser = (id: string): User => ({
   annualIncome: Math.floor(Math.random() * (200000 - 30000 + 1)) + 30000, // Random income between 30k-200k
   employmentStatus: getRandomItem(['employed', 'self-employed', 'unemployed', 'student']),
 });
+
+export const addNewUser = (fullName: string, photoUrl: string): User => {
+    const id = uuidv4();
+    const newUser: User = {
+        id,
+        fullName,
+        faceScanImageUri: photoUrl,
+        kycStatus: 'new',
+        loanStatus: 'none',
+    };
+    users.set(id, newUser);
+    return newUser;
+};
 
 export const getOrCreateUser = (userId: string): User => {
   if (users.has(userId)) {

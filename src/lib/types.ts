@@ -1,4 +1,4 @@
-export type KycStatus = 'unverified' | 'pending' | 'approved' | 'rejected';
+export type KycStatus = 'unverified' | 'pending' | 'approved' | 'rejected' | 'new';
 export type LoanStatus = 'none' | 'pending' | 'review' | 'approved' | 'rejected';
 
 export interface User {
@@ -21,4 +21,9 @@ export interface User {
 export interface KycFormData {
   fullName: string;
   documentNumber: string;
+}
+
+export interface NewUserFormData {
+  fullName: string;
+  photoUrl: string;
 }
