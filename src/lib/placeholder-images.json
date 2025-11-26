@@ -1,3 +1,16 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "doc-scan",
+      "description": "A placeholder image for a user's identification document.",
+      "imageUrl": "https://images.unsplash.com/photo-1605841561924-926295c558fd?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw4fHxkb2N1bWVudCUyMGlkfGVufDB8fHx8MTc2NDEwMDg2OXww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "document id"
+    },
+    {
+      "id": "face-scan",
+      "description": "A placeholder image for a user's face scan.",
+      "imageUrl": "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxwb3J0cmFpdCUyMGZhY2V8ZW58MHx8fHwxNzY0MTU0NDgzfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "portrait face"
+    }
+  ]
 }
