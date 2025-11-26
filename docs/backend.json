@@ -1,86 +1,40 @@
 {
   "entities": {
-    "UserProfile": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "UserProfile",
+    "LoanApplication": {
+      "title": "LoanApplication",
       "type": "object",
-      "description": "Represents a user profile in the Aurum Finance application.",
+      "description": "Represents a single loan application submitted by a user.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the user profile, matching Firebase Auth UID."
-        },
-        "fullName": {
-          "type": "string",
-          "description": "The user's full legal name."
-        },
-        "email": {
-          "type": "string",
-          "description": "The user's email address.",
-          "format": "email"
-        },
-        "secretKey": {
-          "type": "string",
-          "description": "A secret key used for authentication."
-        },
-        "kycStatus": {
-          "type": "string",
-          "description": "The KYC verification status of the user (e.g., pending, approved, rejected)."
-        },
-        "loanAmount": {
-            "type": "number",
-            "description": "The current loan amount requested by the user."
-        },
-        "loanStatus": {
-          "type": "string",
-          "description": "The status of the current loan."
-        },
-        "loanReason": {
-            "type": "string",
-            "description": "The reason or AI rationale for the current loan status."
-        },
-        "creditScore": {
-            "type": "number",
-            "description": "The user's credit score."
-        },
-        "annualIncome": {
-            "type": "number",
-            "description": "The user's annual income."
-        },
-        "employmentStatus": {
-            "type": "string",
-            "description": "The user's employment status."
-        }
+        "id": { "type": "string", "description": "Unique identifier for the application." },
+        "fullName": { "type": "string", "description": "The user's full name." },
+        "loanAmount": { "type": "number", "description": "The current loan amount requested by the user." },
+        "loanStatus": { "type": "string", "description": "The status of the loan (approved, rejected)." },
+        "loanReason": { "type": "string", "description": "The AI rationale for the loan status." },
+        "creditScore": { "type": "number", "description": "The user's credit score." },
+        "annualIncome": { "type": "number", "description": "The user's annual income." },
+        "employmentStatus": { "type": "string", "description": "The user's employment status." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp of when the application was created."}
       },
-      "required": [
-        "id",
-        "fullName",
-        "email",
-        "secretKey",
-        "kycStatus",
-        "loanStatus"
-      ]
+      "required": ["id", "fullName", "loanAmount", "loanStatus", "creditScore", "annualIncome", "employmentStatus", "createdAt"]
     }
   },
   "auth": {
-    "providers": [
-      "anonymous"
-    ]
+    "providers": []
   },
   "firestore": {
     "structure": [
       {
-        "path": "/users/{userId}",
+        "path": "/loanApplications/{applicationId}",
         "definition": {
-          "entityName": "UserProfile",
+          "entityName": "LoanApplication",
           "schema": {
-            "$ref": "#/backend/entities/UserProfile"
+            "$ref": "#/backend/entities/LoanApplication"
           },
-          "description": "Stores user profile information. The 'userId' is the Firebase Auth UID. This path provides path-based ownership for user-specific data.",
+          "description": "Stores individual loan applications.",
           "params": [
             {
-              "name": "userId",
-              "description": "The Firebase Auth UID of the user."
+              "name": "applicationId",
+              "description": "The unique ID of the loan application."
             }
           ]
         }

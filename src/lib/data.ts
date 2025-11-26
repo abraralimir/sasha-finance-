@@ -6,16 +6,13 @@ import {
   getFirestore,
   collection,
   doc,
-  getDoc,
-  getDocs,
   setDoc,
-  addDoc,
+  getDocs,
   query,
-  where,
 } from 'firebase/firestore';
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { firebaseConfig } from '@/firebase/config';
-import type { User } from './types';
+import type { User, LoanApplicationData } from './types';
 
 
 // Helper function to initialize Firebase on the server if it's not already.
@@ -28,85 +25,38 @@ function getDb() {
 }
 
 
-// Helper to get a random item from an array
-const getRandomItem = <T>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
-
-export const addNewUser = async (
-  email: string,
-  fullName: string,
-  secretKey: string
-): Promise<User> => {
+export const createLoanApplication = async (
+  applicationData: LoanApplicationData & { loanStatus: 'approved' | 'rejected', loanReason: string }
+): Promise<string> => {
   const db = getDb();
-  const usersCollection = collection(db, 'users');
+  const applicationsCollection = collection(db, 'loanApplications');
 
   // Firestore will auto-generate an ID for the new document
-  const userDocRef = doc(usersCollection);
+  const appDocRef = doc(applicationsCollection);
 
-  const newUser: User = {
-    id: userDocRef.id,
-    email,
-    fullName,
-    secretKey,
-    kycStatus: 'approved',
-    loanStatus: 'none',
-    creditScore: Math.floor(Math.random() * (850 - 550 + 1)) + 550,
-    annualIncome: Math.floor(Math.random() * (250000 - 40000 + 1)) + 40000,
-    employmentStatus: getRandomItem(['employed', 'self-employed', 'student']),
+  const newApplication = {
+    id: appDocRef.id,
+    ...applicationData,
+    createdAt: new Date().toISOString(),
   };
 
-  await setDoc(userDocRef, newUser);
-  return newUser;
+  await setDoc(appDocRef, newApplication);
+  return appDocRef.id;
 };
 
-export const findUserByCredentials = async (
-  fullName: string,
-  secretKey: string
-): Promise<User | undefined> => {
+
+export const getAllApplications = async (): Promise<(LoanApplicationData & {id: string})[]> => {
   const db = getDb();
-  const usersCollection = collection(db, 'users');
-  
-  const q = query(
-    usersCollection,
-    where('fullName', '==', fullName),
-    where('secretKey', '==', secretKey)
-  );
-
-  const querySnapshot = await getDocs(q);
-  if (querySnapshot.empty) {
-    return undefined;
-  }
-  
-  const userDoc = querySnapshot.docs[0];
-  return { id: userDoc.id, ...userDoc.data() } as User;
+  const appsCollection = collection(db, 'loanApplications');
+  const q = query(appsCollection);
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as (LoanApplicationData & {id: string})));
 };
 
-export const getUser = async (userId: string): Promise<User | undefined> => {
-  const db = getDb();
-  const userDocRef = doc(db, 'users', userId);
-  const docSnap = await getDoc(userDocRef);
-
-  if (docSnap.exists()) {
-    return { id: docSnap.id, ...docSnap.data() } as User;
-  }
-  return undefined;
-};
-
-export const updateUser = async (userId: string, data: Partial<User>): Promise<User> => {
-  const db = getDb();
-  const userDocRef = doc(db, 'users', userId);
-  const user = await getUser(userId);
-  if (!user) {
-    throw new Error('User not found');
-  }
-
-  const updatedData = { ...user, ...data };
-  await setDoc(userDocRef, updatedData, { merge: true });
-  return updatedData;
-};
-
-export const getAllUsers = async (): Promise<User[]> => {
-  const db = getDb();
-  const usersCollection = collection(db, 'users');
-  const snapshot = await getDocs(usersCollection);
-  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
-};
+// No longer needed functions
+// export const findUserByCredentials = async (
+//   fullName: string,
+//   secretKey: string
+// ): Promise<User | undefined> => { ... };
+// export const getUser = async (userId: string): Promise<User | undefined> => { ... };
+// export const updateUser = async (userId: string, data: Partial<User>): Promise<User> => { ... };

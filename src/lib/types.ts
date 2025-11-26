@@ -5,7 +5,7 @@ export interface User {
   id: string;
   email: string;
   fullName: string;
-  secretKey: string;
+  // secretKey has been removed
   kycStatus: KycStatus;
   loanAmount?: number;
   loanStatus: LoanStatus;
@@ -16,12 +16,27 @@ export interface User {
   employmentStatus?: 'employed' | 'unemployed' | 'self-employed' | 'student';
 }
 
-export interface OnboardUserFormData {
-  fullName: string;
-  secretKey: string;
+// This is no longer needed
+// export interface OnboardUserFormData {
+//   fullName: string;
+//   secretKey: string;
+// }
+
+export interface LoanApplicationData {
+    fullName: string;
+    loanAmount: number;
+    creditScore: number;
+    annualIncome: number;
+    employmentStatus: 'employed' | 'unemployed' | 'self-employed' | 'student';
 }
 
-export interface LoginFormData {
-  fullName: string;
-  secretKey: string;
+export interface BankDetails {
+    accountNumber: string;
+    ifscCode: string;
 }
+
+// This is no longer needed
+// export interface LoginFormData {
+//   fullName: string;
+//   secretKey: string;
+// }
