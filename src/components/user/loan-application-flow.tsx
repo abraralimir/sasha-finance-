@@ -112,6 +112,7 @@ const formSteps = [
 ] as const;
 
 export default function LoanApplicationFlow() {
+  const [hasStarted, setHasStarted] = useState(false);
   const [currentStep, setCurrentStep] = useState(0); // 0-4 for questions, 5 for loading, 6 for result, 7 for bank form, 8 for confirmation
   const [isPending, startTransition] = useTransition();
   const [assessmentResult, setAssessmentResult] = useState<{
@@ -185,6 +186,7 @@ export default function LoanApplicationFlow() {
   };
 
   const resetFlow = () => {
+    setHasStarted(false);
     setCurrentStep(0);
     form.reset();
     bankForm.reset();
@@ -342,31 +344,13 @@ export default function LoanApplicationFlow() {
         );
       
       default:
-        // Welcome screen
-        return (
-            <AnimatedBox key="start" className="w-full max-w-lg">
-                <Card className="bg-card/80 backdrop-blur-sm border-primary/20 shadow-lg shadow-primary/5">
-                    <CardHeader className="text-center">
-                        <div className="flex justify-center mb-4">
-                            <AurumLogo />
-                        </div>
-                        <CardTitle className="font-headline text-3xl text-primary">Begin Your Application</CardTitle>
-                        <CardDescription>Let our AI assistant find the best financing options for you.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="text-center">
-                       <Button onClick={() => setCurrentStep(0)} size="lg">
-                            <ArrowRight className="mr-2 h-5 w-5" />
-                            Start Application
-                        </Button>
-                    </CardContent>
-                </Card>
-            </AnimatedBox>
-        );
+        // This case should ideally not be reached if hasStarted is handled correctly.
+        return null;
     }
   };
 
   // Initial welcome screen logic
-  if (currentStep === 0 && !form.formState.isDirty) {
+  if (!hasStarted) {
      return (
         <AnimatedBox key="start" className="w-full max-w-lg">
             <Card className="bg-card/80 backdrop-blur-sm border-primary/20 shadow-lg shadow-primary/5">
@@ -378,7 +362,7 @@ export default function LoanApplicationFlow() {
                     <CardDescription>Let our AI assistant find the best financing options for you.</CardDescription>
                 </CardHeader>
                 <CardContent className="flex justify-center">
-                   <Button onClick={() => {form.markAsDirty(); setCurrentStep(0);}} size="lg">
+                   <Button onClick={() => setHasStarted(true)} size="lg">
                         <ArrowRight className="mr-2 h-5 w-5" />
                         Start Application
                     </Button>
