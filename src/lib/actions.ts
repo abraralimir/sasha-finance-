@@ -1,5 +1,6 @@
 'use server';
 
+import 'dotenv/config';
 import { revalidatePath } from 'next/cache';
 import { assessLoanEligibility } from '@/ai/flows/loan-eligibility-assessment';
 import { addNewUser, findUserByCredentials, getUser, updateUser, getAllUsers } from '@/lib/data';
