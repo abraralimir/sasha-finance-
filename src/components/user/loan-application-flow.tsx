@@ -37,6 +37,9 @@ import {
   Briefcase,
   Home,
   Wallet,
+  FileText,
+  BadgePercent,
+  ShieldCheck,
 } from 'lucide-react';
 import AnimatedBox from '@/components/animated-box';
 import AurumLogo from '../aurum-logo';
@@ -47,6 +50,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../ui/select';
+import { Checkbox } from '../ui/checkbox';
+import { Label } from '../ui/label';
 
 const loanApplicationSchema = z.object({
   fullName: z.string().min(3, 'Full name must be at least 3 characters.'),
@@ -137,7 +142,9 @@ export default function LoanApplicationFlow() {
   const [assessmentResult, setAssessmentResult] = useState<{
     isEligible: boolean;
     reason: string;
+    interestRate?: number;
   } | null>(null);
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const { toast } = useToast();
 
   const form = useForm<LoanApplicationData>({
@@ -154,9 +161,15 @@ export default function LoanApplicationFlow() {
   });
 
   const loanType = form.watch('loanType');
-  
-  const formSteps = loanType === 'property' ? [...baseFormSteps.slice(0, 2), propertyStep, ...baseFormSteps.slice(2)] : baseFormSteps;
 
+  const formSteps =
+    loanType === 'property'
+      ? [
+          ...baseFormSteps.slice(0, 3),
+          propertyStep,
+          ...baseFormSteps.slice(3),
+        ]
+      : baseFormSteps;
 
   const bankForm = useForm<z.infer<typeof bankDetailsSchema>>({
     resolver: zodResolver(bankDetailsSchema),
@@ -205,7 +218,7 @@ export default function LoanApplicationFlow() {
     startTransition(() => {
       // Simulate payment processing
       setTimeout(() => {
-        setCurrentStep(formSteps.length + 3); // Move to final confirmation step
+        setCurrentStep(formSteps.length + 4); // Move to final confirmation step
       }, 1500);
     });
   };
@@ -216,71 +229,95 @@ export default function LoanApplicationFlow() {
     form.reset();
     bankForm.reset();
     setAssessmentResult(null);
+    setTermsAccepted(false);
   };
-  
+
   const renderQuestion = () => {
     if (currentStep >= formSteps.length) return null;
     const stepInfo = formSteps[currentStep];
     const Icon = stepInfo.icon;
-    
+
     return (
-       <AnimatedBox key={currentStep} className="w-full max-w-lg">
+      <AnimatedBox key={currentStep} className="w-full max-w-lg">
         <Card className="bg-card/80 backdrop-blur-sm border-primary/20 shadow-lg shadow-primary/5">
           <CardHeader>
-             <div className="flex items-center gap-4 mb-4">
-                <div className="p-3 bg-accent rounded-lg text-primary">
-                    <Icon className="h-6 w-6" />
-                </div>
-                <CardTitle className="font-headline text-3xl text-primary">{stepInfo.label}</CardTitle>
+            <div className="flex items-center gap-4 mb-4">
+              <div className="p-3 bg-accent rounded-lg text-primary">
+                <Icon className="h-6 w-6" />
+              </div>
+              <CardTitle className="font-headline text-3xl text-primary">
+                {stepInfo.label}
+              </CardTitle>
             </div>
           </CardHeader>
           <CardContent>
             <Form {...form}>
-              <form onSubmit={(e) => { e.preventDefault(); handleNextStep(); }} className="space-y-4">
-                  {stepInfo.type === 'select' ? (
-                     <FormField
-                      control={form.control}
-                      name={stepInfo.field}
-                      render={({ field }) => (
-                        <FormItem>
-                          <Select onValueChange={(value) => {
+              <form
+                onSubmit={e => {
+                  e.preventDefault();
+                  handleNextStep();
+                }}
+                className="space-y-4"
+              >
+                {stepInfo.type === 'select' ? (
+                  <FormField
+                    control={form.control}
+                    name={stepInfo.field}
+                    render={({ field }) => (
+                      <FormItem>
+                        <Select
+                          onValueChange={value => {
                             field.onChange(value);
-                            // If we're changing the loan type, reset to the next step
+                            // Reset to the next step if loan type changes
                             if (stepInfo.field === 'loanType') {
-                               setCurrentStep(1);
+                              setCurrentStep(1);
                             }
-                          }} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select one..." />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {stepInfo.options?.map(opt => <SelectItem key={opt} value={opt} className="capitalize">{opt.replace('-', ' ')}</SelectItem>)}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  ) : (
-                    <FormField
-                      control={form.control}
-                      name={stepInfo.field}
-                      render={({ field }) => (
-                        <FormItem>
+                          }}
+                          defaultValue={field.value}
+                        >
                           <FormControl>
-                            <Input placeholder={stepInfo.placeholder} {...field} type={stepInfo.type} />
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select one..." />
+                            </SelectTrigger>
                           </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  )}
-                 <Button type="submit" className="w-full" size="lg">
-                    <ArrowRight className="mr-2 h-5 w-5" />
-                    Next
-                  </Button>
+                          <SelectContent>
+                            {stepInfo.options?.map(opt => (
+                              <SelectItem
+                                key={opt}
+                                value={opt}
+                                className="capitalize"
+                              >
+                                {opt.replace('-', ' ')}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                ) : (
+                  <FormField
+                    control={form.control}
+                    name={stepInfo.field}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormControl>
+                          <Input
+                            placeholder={stepInfo.placeholder}
+                            {...field}
+                            type={stepInfo.type}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+                <Button type="submit" className="w-full" size="lg">
+                  <ArrowRight className="mr-2 h-5 w-5" />
+                  Next
+                </Button>
               </form>
             </Form>
           </CardContent>
@@ -288,21 +325,53 @@ export default function LoanApplicationFlow() {
       </AnimatedBox>
     );
   };
-  
+
   const renderContent = () => {
+    if (!hasStarted) {
+      return (
+        <AnimatedBox key="start" className="w-full max-w-lg">
+          <Card className="bg-card/80 backdrop-blur-sm border-primary/20 shadow-lg shadow-primary/5">
+            <CardHeader className="text-center">
+              <div className="flex justify-center mb-4">
+                <AurumLogo />
+              </div>
+              <CardTitle className="font-headline text-3xl text-primary">
+                Begin Your Application
+              </CardTitle>
+              <CardDescription>
+                Let our AI assistant find the best financing options for you.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex justify-center">
+              <Button onClick={() => setHasStarted(true)} size="lg">
+                <ArrowRight className="mr-2 h-5 w-5" />
+                Start Application
+              </Button>
+            </CardContent>
+          </Card>
+        </AnimatedBox>
+      );
+    }
+
     if (currentStep < formSteps.length) {
       return renderQuestion();
     }
-    
+
     switch (currentStep) {
       case formSteps.length: // Loading state
         return (
           <AnimatedBox key="loading" className="w-full max-w-lg text-center">
             <Card className="bg-card/80 backdrop-blur-sm border-primary/20 shadow-lg shadow-primary/5">
               <CardHeader>
-                <div className="flex justify-center mb-4"><Loader2 className="h-16 w-16 text-primary animate-spin" /></div>
-                <CardTitle className="font-headline text-3xl text-primary">Assessing Eligibility...</CardTitle>
-                <CardDescription>Our AI is analyzing your profile to find the best options.</CardDescription>
+                <div className="flex justify-center mb-4">
+                  <Loader2 className="h-16 w-16 text-primary animate-spin" />
+                </div>
+                <CardTitle className="font-headline text-3xl text-primary">
+                  Assessing Eligibility...
+                </CardTitle>
+                <CardDescription>
+                  Our AI is analyzing your profile to find the best options.
+                </CardDescription>
               </CardHeader>
             </Card>
           </AnimatedBox>
@@ -312,58 +381,176 @@ export default function LoanApplicationFlow() {
         if (!assessmentResult) return null;
         if (assessmentResult.isEligible) {
           return (
-            <AnimatedBox key="approved" className="w-full max-w-lg text-center">
-              <Card className="bg-card/80 backdrop-blur-sm border-primary/20 shadow-lg shadow-primary/5">
-                <CardHeader>
-                  <div className="flex justify-center mb-4"><CheckCircle className="h-16 w-16 text-green-500" /></div>
-                  <CardTitle className="font-headline text-3xl text-primary">Congratulations! You're Approved.</CardTitle>
-                  <CardDescription>{assessmentResult.reason}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground mb-4">Please provide your bank details for fund disbursal.</p>
-                  <Form {...bankForm}>
-                    <form onSubmit={bankForm.handleSubmit(onBankSubmit)} className="space-y-4 text-left">
-                      <FormField control={bankForm.control} name="accountNumber" render={({ field }) => (
-                        <FormItem><FormLabel>Account Number (12 digits)</FormLabel><FormControl><Input placeholder="123456789012" {...field} /></FormControl><FormMessage /></FormItem>
-                      )} />
-                      <FormField control={bankForm.control} name="ifscCode" render={({ field }) => (
-                        <FormItem><FormLabel>3-Digit Security Code</FormLabel><FormControl><Input placeholder="123" {...field} /></FormControl><FormMessage /></FormItem>
-                      )} />
-                      <Button type="submit" disabled={isPending} className="w-full" size="lg">
-                        {isPending ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Send className="mr-2 h-5 w-5" />}
-                        Disburse Funds
-                      </Button>
-                    </form>
-                  </Form>
-                </CardContent>
-              </Card>
-            </AnimatedBox>
-          );
+             <AnimatedBox key="approved" className="w-full max-w-lg text-center">
+               <Card className="bg-card/80 backdrop-blur-sm border-primary/20 shadow-lg shadow-primary/5">
+                 <CardHeader>
+                   <div className="flex justify-center mb-4"><CheckCircle className="h-16 w-16 text-green-500" /></div>
+                   <CardTitle className="font-headline text-3xl text-primary">Congratulations! You're Approved.</CardTitle>
+                   <CardDescription>{assessmentResult.reason}</CardDescription>
+                 </CardHeader>
+                 <CardContent>
+                   <Button onClick={() => setCurrentStep(formSteps.length + 2)} size="lg">
+                     Review Terms & Proceed
+                     <ArrowRight className="ml-2 h-5 w-5" />
+                   </Button>
+                 </CardContent>
+               </Card>
+             </AnimatedBox>
+           );
         } else {
           return (
             <AnimatedBox key="rejected" className="w-full max-w-lg text-center">
               <Card className="bg-card/80 backdrop-blur-sm border-primary/20 shadow-lg shadow-primary/5">
                 <CardHeader>
-                  <div className="flex justify-center mb-4"><XCircle className="h-16 w-16 text-destructive" /></div>
-                  <CardTitle className="font-headline text-3xl text-primary">Application Update</CardTitle>
+                  <div className="flex justify-center mb-4">
+                    <XCircle className="h-16 w-16 text-destructive" />
+                  </div>
+                  <CardTitle className="font-headline text-3xl text-primary">
+                    Application Update
+                  </CardTitle>
                   <CardDescription>{assessmentResult.reason}</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <Button onClick={resetFlow} variant="outline">Start Over</Button>
+                  <Button onClick={resetFlow} variant="outline">
+                    Start Over
+                  </Button>
                 </CardContent>
               </Card>
             </AnimatedBox>
           );
         }
+      
+      case formSteps.length + 2: // Terms & Conditions
+        return (
+           <AnimatedBox key="terms" className="w-full max-w-lg">
+             <Card className="bg-card/80 backdrop-blur-sm border-primary/20 shadow-lg shadow-primary/5">
+               <CardHeader>
+                 <div className="flex justify-center mb-4"><FileText className="h-16 w-16 text-primary" /></div>
+                 <CardTitle className="text-center font-headline text-3xl text-primary">Review Your Loan Terms</CardTitle>
+                 <CardDescription className="text-center">Please review and accept the terms to proceed.</CardDescription>
+               </CardHeader>
+               <CardContent className="space-y-6">
+                 <div className="flex items-center justify-center p-4 rounded-lg bg-accent/50 border border-primary/20">
+                    <BadgePercent className="h-8 w-8 text-primary mr-4"/>
+                    <div>
+                        <p className="text-muted-foreground">Interest Rate (Annual)</p>
+                        <p className="font-bold text-2xl text-primary">{assessmentResult?.interestRate?.toFixed(2)}%</p>
+                    </div>
+                 </div>
 
-      case formSteps.length + 3: // Confirmation state
+                 <div className="space-y-4 text-sm text-muted-foreground">
+                    <div className="flex items-start gap-3">
+                        <ShieldCheck className="h-5 w-5 text-primary/80 mt-0.5 shrink-0" />
+                        <p>You agree to make timely payments on a monthly basis as per the agreed schedule.</p>
+                    </div>
+                     <div className="flex items-start gap-3">
+                        <ShieldCheck className="h-5 w-5 text-primary/80 mt-0.5 shrink-0" />
+                        <p>Any delay in payment may result in additional charges and could impact your credit score.</p>
+                    </div>
+                     <div className="flex items-start gap-3">
+                        <ShieldCheck className="h-5 w-5 text-primary/80 mt-0.5 shrink-0" />
+                        <p>This loan is subject to the terms and conditions outlined in the final loan agreement document.</p>
+                    </div>
+                 </div>
+
+                 <div className="flex items-center space-x-2 pt-4">
+                    <Checkbox id="terms" checked={termsAccepted} onCheckedChange={(checked) => setTermsAccepted(checked as boolean)} />
+                    <Label htmlFor="terms" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                        I have read and agree to the terms and conditions.
+                    </Label>
+                </div>
+                 
+                 <Button onClick={() => setCurrentStep(formSteps.length + 3)} disabled={!termsAccepted} className="w-full" size="lg">
+                    Accept & Continue
+                   <ArrowRight className="ml-2 h-5 w-5" />
+                 </Button>
+               </CardContent>
+             </Card>
+           </AnimatedBox>
+        )
+
+      case formSteps.length + 3: // Bank Details
+        return (
+          <AnimatedBox key="bank" className="w-full max-w-lg">
+            <Card className="bg-card/80 backdrop-blur-sm border-primary/20 shadow-lg shadow-primary/5">
+              <CardHeader>
+                <div className="flex justify-center mb-4">
+                  <Banknote className="h-16 w-16 text-primary" />
+                </div>
+                <CardTitle className="text-center font-headline text-3xl text-primary">
+                  Bank Details
+                </CardTitle>
+                <CardDescription className="text-center">
+                  Please provide your bank details for fund disbursal.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Form {...bankForm}>
+                  <form
+                    onSubmit={bankForm.handleSubmit(onBankSubmit)}
+                    className="space-y-4"
+                  >
+                    <FormField
+                      control={bankForm.control}
+                      name="accountNumber"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Account Number (12 digits)</FormLabel>
+                          <FormControl>
+                            <Input placeholder="123456789012" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={bankForm.control}
+                      name="ifscCode"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>3-Digit Security Code</FormLabel>
+                          <FormControl>
+                            <Input placeholder="123" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <Button
+                      type="submit"
+                      disabled={isPending}
+                      className="w-full"
+                      size="lg"
+                    >
+                      {isPending ? (
+                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                      ) : (
+                        <Send className="mr-2 h-5 w-5" />
+                      )}
+                      Disburse Funds
+                    </Button>
+                  </form>
+                </Form>
+              </CardContent>
+            </Card>
+          </AnimatedBox>
+        );
+
+      case formSteps.length + 4: // Confirmation state
         return (
           <AnimatedBox key="confirmation" className="w-full max-w-lg text-center">
             <Card className="bg-card/80 backdrop-blur-sm border-primary/20 shadow-lg shadow-primary/5">
               <CardHeader>
-                <div className="flex justify-center mb-4"><Banknote className="h-16 w-16 text-primary" /></div>
-                <CardTitle className="font-headline text-3xl text-primary">Funds Disbursed!</CardTitle>
-                <CardDescription>Your loan amount has been successfully transferred and should reflect in your account shortly.</CardDescription>
+                <div className="flex justify-center mb-4">
+                  <Banknote className="h-16 w-16 text-primary" />
+                </div>
+                <CardTitle className="font-headline text-3xl text-primary">
+                  Funds Disbursed!
+                </CardTitle>
+                <CardDescription>
+                  Your loan amount has been successfully transferred and should
+                  reflect in your account shortly.
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <Button onClick={resetFlow} variant="outline">
@@ -373,34 +560,12 @@ export default function LoanApplicationFlow() {
             </Card>
           </AnimatedBox>
         );
-      
+
       default:
         // This case should ideally not be reached if hasStarted is handled correctly.
         return null;
     }
   };
-
-  if (!hasStarted) {
-     return (
-        <AnimatedBox key="start" className="w-full max-w-lg">
-            <Card className="bg-card/80 backdrop-blur-sm border-primary/20 shadow-lg shadow-primary/5">
-                <CardHeader className="text-center">
-                    <div className="flex justify-center mb-4">
-                        <AurumLogo />
-                    </div>
-                    <CardTitle className="font-headline text-3xl text-primary">Begin Your Application</CardTitle>
-                    <CardDescription>Let our AI assistant find the best financing options for you.</CardDescription>
-                </CardHeader>
-                <CardContent className="flex justify-center">
-                   <Button onClick={() => setHasStarted(true)} size="lg">
-                        <ArrowRight className="mr-2 h-5 w-5" />
-                        Start Application
-                    </Button>
-                </CardContent>
-            </Card>
-        </AnimatedBox>
-    );
-  }
 
   return renderContent();
 }
